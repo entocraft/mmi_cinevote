@@ -36,7 +36,8 @@ main.container {
 }
 
 .card:hover {
-  transform: translateY(-4px);
+  transform: scale(1.03);
+  z-index: 2;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
@@ -337,5 +338,60 @@ main.container {
 
 #contentSwitcher .btn:not(.active):hover {
   background-color: rgba(56, 50, 135, 0.1);
+}
+
+.searchbtn{
+  background-color: var(--btn-pink);
+  color: var(--background-color);
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+}
+
+.searchbtn:hover,
+.searchbtn:focus {
+  background-color: var(--btn-pink);
+  color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(240, 221, 246, 0.5);
+}
+
+.playset-card {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background-size: cover;
+  background-position: center top;
+  border-radius: 1rem;
+  color: white;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  transition: transform 0.2s ease;
+  cursor: pointer;
+}
+
+.playset-card:hover {
+  transform: scale(1.03);
+  z-index: 2;
+}
+
+.playset-card h6 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.playset-card .small {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.create-card {
+  background: repeating-linear-gradient(45deg, #eee, #eee 10px, #ddd 10px, #ddd 20px);
+  color: #444;
+  text-align: center;
+  justify-content: center;
+  font-weight: bold;
 }
 

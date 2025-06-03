@@ -1,3 +1,10 @@
+let movieToAdd = null;
+let currentPage = 1;
+let isFetching = false;
+let hasMorePages = true;
+
+let currentSearchQuery = '';
+
 const TMDB_PARAMS = {
   include_adult: false,
   include_video: false,
@@ -23,33 +30,62 @@ const IMG_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const cardContainer = document.getElementById('cardContainer');
 
 async function fetchPopularMovies() {
-  try {
-    cardContainer.innerHTML = `
-      <div class="d-flex justify-content-center w-100 my-2">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Chargement...</span>
-        </div>
-      </div>
-    `;
+  if (isFetching || !hasMorePages || currentSearchQuery.trim()) return;
 
-    const TMDB_URL = getTmdbUrl(currentType);
+  isFetching = true;
+
+  try {
+    const params = new URLSearchParams({ ...TMDB_PARAMS, page: currentPage });
+    const TMDB_URL = `https://api.themoviedb.org/3/discover/${currentType}?${params.toString()}`;
+
     const response = await fetch(TMDB_URL, OPTIONS);
     if (!response.ok) throw new Error('Statut HTTP ' + response.status);
 
     const data = await response.json();
+
     renderMovieCards(data.results);
+
+    currentPage++;
+    hasMorePages = currentPage <= data.total_pages;
   } catch (err) {
     console.error('Erreur fetchPopularMovies:', err);
-    cardContainer.innerHTML = `
-      <div class="col-12">
-        <div class="alert alert-danger" role="alert">
-          Impossible de récupérer les ${currentType === 'tv' ? 'séries' : 'films'} populaires.
-        </div>
-      </div>
-    `;
+  } finally {
+    isFetching = false;
   }
 }
 
+async function fetchSearchResults(query) {
+  if (!query.trim()) {
+    // Revenir au contenu classique
+    currentSearchQuery = '';
+    currentPage = 1;
+    hasMorePages = true;
+    cardContainer.innerHTML = '';
+    fetchPopularMovies();
+    return;
+  }
+
+  isFetching = true;
+
+  try {
+    const searchURL = `https://api.themoviedb.org/3/search/${currentType}?query=${encodeURIComponent(query)}&page=${currentPage}&include_adult=false`;
+    const res = await fetch(searchURL, OPTIONS);
+    const data = await res.json();
+
+    if (currentPage === 1) cardContainer.innerHTML = '';
+    renderMovieCards(data.results);
+
+    if (currentPage >= data.total_pages) {
+      hasMorePages = false;
+    } else {
+      currentPage++;
+    }
+  } catch (e) {
+    console.error("Erreur recherche TMDb :", e);
+  } finally {
+    isFetching = false;
+  }
+}
 
 async function fetchCredits(id) {
   const url = `https://api.themoviedb.org/3/${currentType}/${id}/credits`;
@@ -67,8 +103,60 @@ async function fetchProviders(id) {
   return data.results['FR'];
 }
 
+async function loadUserPlaysets() {
+  const select = document.getElementById('playsetSelect');
+  select.innerHTML = '<option value="">Sélectionne un playset</option>';
+
+  try {
+    const res = await fetch('./php/playset_bdd_access.php?action=get&user_id=1'); // ID utilisateur fixé à 1
+    const data = await res.json();
+
+    if (Array.isArray(data.playsets)) {
+      data.playsets.forEach(ps => {
+        const option = document.createElement('option');
+        option.value = ps.ID; // Attention à la casse : 'ID' (en majuscule depuis la requête SQL)
+        option.textContent = ps.Name;
+        select.appendChild(option);
+      });
+    } else {
+      select.innerHTML = '<option disabled>Erreur de réponse du serveur</option>';
+    }
+  } catch (e) {
+    console.error('Erreur chargement playsets:', e);
+    select.innerHTML = '<option disabled>Erreur de chargement</option>';
+  }
+}
+
+document.getElementById('confirmAddToPlaysetBtn').addEventListener('click', async () => {
+  const select = document.getElementById('playsetSelect');
+  const playsetId = select.value;
+
+  if (!playsetId) {
+    alert("Tu dois sélectionner un playset.");
+    return;
+  }
+
+  try {
+    await fetch('./php/playset_bdd_access.php?action=add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        playset_id: playsetId,
+        tmdb_id: movieToAdd.id,
+        type: movieToAdd.type
+      })
+    });
+
+    bootstrap.Modal.getInstance(document.getElementById('addToPlaysetModal')).hide();
+    alert(`Ajouté à ton playset avec succès !`);
+  } catch (e) {
+    alert("Erreur lors de l'ajout au playset");
+    console.error(e);
+  }
+});
+
+
 function renderMovieCards(movies) {
-  cardContainer.innerHTML = '';
 
   movies.forEach(movie => {
     if (!movie.poster_path) return;
@@ -86,20 +174,30 @@ function renderMovieCards(movies) {
     img.alt = movie.title + ' poster';
     img.className = 'card-img-top';
 
-    // Overlay container
     const overlay = document.createElement('div');
     overlay.className = 'card-hover-overlay';
 
-    // "+" button
     const addButton = document.createElement('button');
     addButton.className = 'btn btn-sm add-button';
     addButton.innerHTML = '<i class="bi bi-bookmark"></i>';
     addButton.title = 'Ajouter au playset';
 
-    // "En savoir plus" button
     const moreButton = document.createElement('button');
     moreButton.className = 'btn more-button w-100';
     moreButton.innerText = 'En savoir plus';
+
+    addButton.addEventListener('click', async () => {
+      movieToAdd = {
+        id: movie.id,
+        title: movie.title || movie.name,
+        type: currentType
+      };
+    
+      await loadUserPlaysets();
+    
+      const playsetModal = new bootstrap.Modal(document.getElementById('addToPlaysetModal'));
+      playsetModal.show();
+    });
 
     moreButton.addEventListener('click', async () => {
       document.getElementById('movieModalLabel').textContent = movie.title || movie.name;
@@ -156,12 +254,9 @@ function renderMovieCards(movies) {
       modal.show();
     });
        
-
-    // Append buttons to overlay
     overlay.appendChild(addButton);
     overlay.appendChild(moreButton);
 
-    // Append everything
     card.appendChild(img);
     card.appendChild(overlay);
     col.appendChild(card);
@@ -170,21 +265,50 @@ function renderMovieCards(movies) {
   });
 }
 
-let currentType = 'movie'; // Défaut : films
+let currentType = 'movie';
 
-// Initialisation après chargement
 fetchPopularMovies();
 
-// Gestion du switch "Films / Séries"
+window.addEventListener('scroll', () => {
+  const scrollPosition = window.innerHeight + window.scrollY;
+  const threshold = document.body.offsetHeight - 300;
+
+  if (scrollPosition >= threshold && !isFetching && hasMorePages && !currentSearchQuery) {
+    fetchPopularMovies();
+  }
+});
+
+
 const switchButtons = document.querySelectorAll('#contentSwitcher .btn');
 switchButtons.forEach(button => {
   button.addEventListener('click', () => {
-    // Visuel actif
+
     switchButtons.forEach(b => b.classList.remove('active'));
     button.classList.add('active');
 
-    // Mise à jour du type
     currentType = button.dataset.type;
+
+    currentPage = 1;
+    hasMorePages = true;
+    cardContainer.innerHTML = '';
+    currentSearchQuery = '';
+
     fetchPopularMovies();
   });
+});
+
+document.getElementById('searchButton').addEventListener('click', () => {
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query) return;
+  currentPage = 1;
+  hasMorePages = true;
+  cardContainer.innerHTML = '';
+  currentSearchQuery = query;
+  fetchSearchResults(query);
+});
+
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    document.getElementById('searchButton').click();
+  }
 });
