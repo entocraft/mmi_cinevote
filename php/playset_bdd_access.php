@@ -7,6 +7,68 @@ require_once 'db.php'; // Inclusion de la connexion PDO
 $action = $_GET['action'] ?? '';
 
 switch ($action) {
+case 'user_vote':
+    $input = json_decode(file_get_contents('php://input'), true);
+    $user_id = $input['user_id'] ?? null;
+    $vote_id = $input['vote_id'] ?? null;
+    $tmdb_id = $input['tmdb_id'] ?? null;
+    $type = $input['type'] ?? null;
+
+    if (!$user_id || !$vote_id || !$tmdb_id || !$type) {
+        echo json_encode(['success' => false, 'error' => 'Données manquantes']);
+        exit;
+    }
+
+    // Vérifier qu'il n'a pas déjà voté pour cette session
+    $stmt = $pdo->prepare("SELECT 1 FROM UserVote WHERE UserID = ? AND VoteID = ?");
+    $stmt->execute([$user_id, $vote_id]);
+    if ($stmt->fetch()) {
+        echo json_encode(['success' => false, 'error' => 'Vous avez déjà voté']);
+        exit;
+    }
+
+    // Insérer le vote
+    $stmt = $pdo->prepare("INSERT INTO UserVote (UserID, VoteID, TMDB_ID, Type) VALUES (?, ?, ?, ?)");
+    $success = $stmt->execute([$user_id, $vote_id, $tmdb_id, $type]);
+    echo json_encode(['success' => $success]);
+    break;
+
+case 'vote_results':
+    // Récupérer l’ID de la session de vote depuis l’URL
+    $vote_id = $_GET['vote_id'] ?? null;
+    if (!$vote_id) {
+        echo json_encode(['results' => []]);
+        exit;
+    }
+
+    // 1. Calculer le nombre de votes par TMDB_ID et Type
+    $stmt = $pdo->prepare(
+        "SELECT TMDB_ID AS tmdb_id, Type AS type, COUNT(*) AS votes 
+         FROM UserVote 
+         WHERE VoteID = ? 
+         GROUP BY TMDB_ID, Type 
+         ORDER BY votes DESC"
+    );
+    $stmt->execute([$vote_id]);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // 2. Renvoie le JSON attendu par le front
+    echo json_encode(['results' => $results]);
+    break;
+    
+case 'has_voted':
+    $user_id = $_GET['user_id'] ?? null;
+    $vote_id = $_GET['vote_id'] ?? null;
+    if (!$user_id || !$vote_id) {
+        echo json_encode(['voted' => false]);
+        exit;
+    }
+    $stmt = $pdo->prepare("SELECT 1 FROM UserVote WHERE UserID = ? AND VoteID = ?");
+    $stmt->execute([$user_id, $vote_id]);
+    $has = $stmt->fetch() ? true : false;
+    echo json_encode(['voted' => $has]);
+    break;
+
 case 'get':
     $userId = $_GET['user_id'] ?? null;
     $tmdbId = $_GET['tmdb_id'] ?? null; // Ajout
@@ -174,6 +236,21 @@ case 'create_vote_session':
     $stmt->execute([$playset_id, $name, $end, $description]);
     $vote_id = $pdo->lastInsertId();
     echo json_encode(['success' => true, 'vote_id' => $vote_id]);
+    break;
+
+case 'get_vote_session':
+    $id = $_GET['id'] ?? null;
+    if (!$id) { echo json_encode(['error'=>'ID manquant']); exit; }
+    $stmt = $pdo->prepare("SELECT pv.Name, pv.End, pv.PlaysetID, ps.Banner FROM PlaysetVote pv JOIN Playsets ps ON pv.PlaysetID = ps.ID WHERE pv.ID = ?");
+    $stmt->execute([$id]);
+    $vote = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$vote) { echo json_encode(['error'=>'Vote introuvable']); exit; }
+    echo json_encode([
+        'name' => $vote['Name'],
+        'end' => $vote['End'],
+        'playset_id' => $vote['PlaysetID'],
+        'banner' => $vote['Banner']
+    ]);
     break;
 
 default:

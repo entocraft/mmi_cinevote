@@ -416,3 +416,122 @@ main.container {
   border-radius: 50%;
   transition: background 0.2s;
 }
+
+.vote-panel {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(34,34,36,0.85);
+  border-radius: 30px;
+  padding: 1rem;
+  box-shadow: 0 8px 42px 0 #2e225d3d;
+  color: #fff;
+  z-index: 2;
+  width: 95vw;
+  max-width: 780px;
+  min-width: 310px;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* effet glassmorphisme */
+  backdrop-filter: blur(12px) saturate(1.45);
+  border: 1px solid rgba(160,130,255,0.10);
+}
+
+@media (min-width: 768px) {
+  .vote-panel {
+    padding: 1rem;
+    min-width: 600px;
+    min-height: 240px;
+    width: 66vw;
+    max-width: 880px;
+  }
+  .vote-panel-graph {
+    min-width: 170px;
+    max-width: 220px;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+  }
+  .vote-panel-content {
+    flex: 1 1 320px;
+    min-width: 220px;
+  }
+  .vote-selected-poster img {
+    display: block;
+    max-height: 80px;
+    border-radius: 13px;
+    box-shadow: 0 2px 18px 0 #2d1940cc;
+    background: #271e34;
+    margin: auto;
+  }
+}
+
+.banner {
+  background-size: cover;
+  background-position: center 30%;
+  height: 44vh;
+  position: relative;
+  border-bottom: 3px solid #312940;
+  margin-bottom: 1.3rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding-right: 3vw;
+}
+
+.vote-card {
+  background: rgba(38, 36, 54, 0.96);
+  border-radius: 15px;
+  max-height: 40vh;
+  max-width: 590px;
+  min-width: 320px;
+  width: 95vw;
+  box-shadow: 0 8px 42px 0 #2e225d3d;
+  border: none;
+  position: relative;
+  top: 2vw;
+}
+
+@media (max-width: 767.98px) {
+  .banner {
+      justify-content: center;
+      padding-right: 0;
+      height: 70vh;
+      min-height: 380px;
+    }
+    .vote-card {
+      max-width: 97vw;
+      min-width: 88vw;
+      margin: 0 auto;
+      padding: 1.5rem 1rem;
+      min-height: 300px;
+    }
+  .vote-panel {
+    left: 50%; top: 54%;
+    transform: translate(-50%, -50%);
+    min-width: 90vw; max-width: 99vw;
+    padding: 1.2rem 0.7rem;
+    width: 99vw;
+  }
+  .vote-panel-graph,
+  .vote-panel-content {
+    width: 100%;
+    min-width: unset;
+    padding: 0 !important;
+  }
+  .vote-panel-content { padding-top: 1.2rem !important; }
+  .vote-selected-poster { display: none !important; }
+}
+.vote-panel-graph {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.vote-selected-poster img {
+  max-height: 80px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #2c2740;
+  box-shadow: 0 2px 8px 0 #332e50bb;
+}

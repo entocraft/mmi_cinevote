@@ -19,7 +19,9 @@ const TMDB_OPTIONS = {
     return await res.json();
   }  
 
-  document.getElementById('bannerSearchBtn').addEventListener('click', async () => {
+const bannerSearchBtn = document.getElementById('bannerSearchBtn');
+if (bannerSearchBtn) {
+  bannerSearchBtn.addEventListener('click', async () => {
     const query = document.getElementById('bannerSearchInput').value.trim();
     const bannerOptions = document.getElementById('bannerOptions');
     if (!query) return;
@@ -91,6 +93,7 @@ const TMDB_OPTIONS = {
       bannerOptions.innerHTML = '<p class="text-danger">Erreur lors du chargement.</p>';
     }
   });
+}
   
   
   
