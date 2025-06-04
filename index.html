@@ -9,6 +9,34 @@
     <link rel="stylesheet" href="css/base.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
 </head>
+
+<div class="modal fade" id="createPlaysetModal" tabindex="-1" aria-labelledby="createPlaysetModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content text-dark">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createPlaysetModalLabel">Créer un nouveau playset</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <form id="createPlaysetForm">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="createPlaysetName" class="form-label">Nom du playset</label>
+            <input type="text" class="form-control" id="createPlaysetName" required>
+          </div>
+          <div class="mb-3">
+            <label for="createPlaysetDesc" class="form-label">Description</label>
+            <textarea class="form-control" id="createPlaysetDesc" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary">Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
   <div class="modal fade" id="addToPlaysetModal" tabindex="-1" aria-labelledby="addToPlaysetModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content text-dark">

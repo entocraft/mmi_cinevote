@@ -48,3 +48,36 @@ async function loadPlaysets() {
 }
 
 loadPlaysets();
+
+function openCreatePlaysetModal() {
+  const modal = new bootstrap.Modal(document.getElementById('createPlaysetModal'));
+  modal.show();
+}
+
+document.getElementById('createPlaysetForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const name = document.getElementById('createPlaysetName').value.trim();
+  const desc = document.getElementById('createPlaysetDesc').value.trim();
+
+  if (!name) return;
+
+  const userId = 1; // À remplacer par l’ID dynamique si tu as une gestion de session
+  const res = await fetch('./php/playset_bdd_access.php?action=create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, name, description: desc })
+  });
+  const data = await res.json();
+
+  if (data.success) {
+    // Ferme le modal et rafraîchit la liste des playsets
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('createPlaysetModal'));
+    modal.hide();
+    document.getElementById('createPlaysetForm').reset();
+    if (typeof loadPlaysets === 'function') loadPlaysets(); // recharge la liste principale
+    if (typeof loadUserPlaysets === 'function') loadUserPlaysets(); // recharge aussi la liste dans la modal d'ajout si besoin
+  } else {
+    alert(data.error || "Erreur lors de la création du playset.");
+  }
+});

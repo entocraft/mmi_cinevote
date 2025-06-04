@@ -108,14 +108,18 @@ async function loadUserPlaysets() {
   select.innerHTML = '<option value="">Sélectionne un playset</option>';
 
   try {
-    const res = await fetch('./php/playset_bdd_access.php?action=get&user_id=1'); // ID utilisateur fixé à 1
+    const res = await fetch(`./php/playset_bdd_access.php?action=get&user_id=1&tmdb_id=${movieToAdd.id}&type=${movieToAdd.type}`);
     const data = await res.json();
 
     if (Array.isArray(data.playsets)) {
       data.playsets.forEach(ps => {
         const option = document.createElement('option');
-        option.value = ps.ID; // Attention à la casse : 'ID' (en majuscule depuis la requête SQL)
-        option.textContent = ps.Name;
+        option.value = ps.ID;
+        option.textContent = ps.Name + (ps.contains ? ' (déjà ajouté)' : '');
+        if (ps.contains) {
+          option.disabled = true;
+          option.style.color = 'gray';
+        }
         select.appendChild(option);
       });
     } else {
@@ -126,6 +130,20 @@ async function loadUserPlaysets() {
     select.innerHTML = '<option disabled>Erreur de chargement</option>';
   }
 }
+
+const confirmBtn = document.getElementById('confirmAddToPlaysetBtn');
+const playsetSelect = document.getElementById('playsetSelect');
+const newPlaysetInput = document.getElementById('newPlaysetName');
+
+function updateBtnState() {
+  confirmBtn.disabled = !(
+    (playsetSelect.value && !playsetSelect.options[playsetSelect.selectedIndex].disabled)
+    || newPlaysetInput.value.trim()
+  );
+}
+playsetSelect.addEventListener('change', updateBtnState);
+newPlaysetInput.addEventListener('input', updateBtnState);
+updateBtnState();
 
 document.getElementById('confirmAddToPlaysetBtn').addEventListener('click', async () => {
   const select = document.getElementById('playsetSelect');
