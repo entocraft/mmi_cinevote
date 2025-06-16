@@ -1,4 +1,7 @@
 <?php
+session_start();
+$userIdSession = $_SESSION['user']['id'] ?? ($_SESSION['user_id'] ?? null);
+
 file_put_contents("debug.log", file_get_contents("php://input") . PHP_EOL, FILE_APPEND);
 
 header('Content-Type: application/json');
@@ -9,7 +12,7 @@ $action = $_GET['action'] ?? '';
 switch ($action) {
 case 'user_vote':
     $input = json_decode(file_get_contents('php://input'), true);
-    $user_id = $input['user_id'] ?? null;
+    $user_id = $userIdSession;
     $vote_id = $input['vote_id'] ?? null;
     $tmdb_id = $input['tmdb_id'] ?? null;
     $type = $input['type'] ?? null;
@@ -57,7 +60,7 @@ case 'vote_results':
     break;
     
 case 'has_voted':
-    $user_id = $_GET['user_id'] ?? null;
+    $user_id = $userIdSession;
     $vote_id = $_GET['vote_id'] ?? null;
     if (!$user_id || !$vote_id) {
         echo json_encode(['voted' => false]);
@@ -70,7 +73,7 @@ case 'has_voted':
     break;
 
 case 'get':
-    $userId = $_GET['user_id'] ?? null;
+    $userId = $userIdSession;
     $tmdbId = $_GET['tmdb_id'] ?? null; // Ajout
     $type = $_GET['type'] ?? null;      // Optionnel : film/serie
 
@@ -105,7 +108,7 @@ case 'get':
 
 case 'create':
     $input = json_decode(file_get_contents('php://input'), true);
-    $userId = $input['user_id'] ?? null;
+    $userId = $userIdSession;
     $name = $input['name'] ?? null;
     $description = $input['description'] ?? '';
     if (!$userId || !$name) {
@@ -125,7 +128,7 @@ case 'add':
     break;
 
 case 'list':
-    $userId = $_GET['user_id'] ?? null;
+    $userId = $userIdSession;
     if (!$userId) {
         echo json_encode(['error' => 'ID utilisateur manquant']);
         exit;

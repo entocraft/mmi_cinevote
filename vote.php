@@ -1,3 +1,11 @@
+<?php
+session_start();
+$user_id = $_SESSION['user_id'] ?? null;
+if (!$user_id) {
+    header('Location: login_form.php');
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -36,8 +44,7 @@
       color: #fff;
     }
     .vote-graph {
-      width: 115px; height: 115px; background: #584e63;
-      border-radius: 50%; margin: 0 0 1rem 0;
+      width: 115px; height: 115px; background: transparent;
       display: block;
     }
     .timer {
@@ -89,8 +96,28 @@
 
   <script src="./js/tmdb.js"></script>
   <script>
+    const USER_ID = <?= isset($user_id) ? $user_id : 'null' ?>;
     const VOTE_ID = new URLSearchParams(location.search).get('vote_id');
     let PLAYSET_ID = null; // on l'obtient via l'API
+
+    // Fonction utilitaire : récupérer le titre par type et ID depuis TMDb
+    async function fetchTitleById(type, id) {
+      const url = `https://api.themoviedb.org/3/${type}/${id}?language=fr-FR`;
+      try {
+        const response = await fetch(url, {
+          headers: {
+            accept: 'application/json',
+            Authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhYzhmMzliYWFiNThlOGZjMWU1MzU2ZmExMTY0NjE3NyIsIm5iZiI6MTc0ODg2NzkxNC41NTEsInN1YiI6IjY4M2Q5YjRhNGU4ODljZjA3NjY4OWQyMyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.yZegMUEuDzZ2DgNqy_uI6dwrWpLjItOOcmGbHhaqrDI' // Remplace par ton vrai token
+          }
+        });
+        if (!response.ok) throw new Error(`Erreur HTTP ${response.status}`);
+        const data = await response.json();
+        return data.title || data.name || 'Titre inconnu';
+      } catch (err) {
+        console.error('Erreur lors de la récupération du titre :', err);
+        return 'Erreur de récupération';
+      }
+    }
 
     // 1. Charger la session de vote (nom, date fin, playset id, etc)
     async function loadVoteSession() {
@@ -104,9 +131,7 @@
       // Timer
       setupTimer(data.end);
       // Charger films
-      loadGalleryAndOptions(PLAYSET_ID);
-      // Init le graphique
-      updateChart();
+      await loadGalleryAndOptions(PLAYSET_ID);
     }
 
     async function loadGalleryAndOptions(playsetId) {
@@ -115,25 +140,30 @@
       // Galerie de films
       const gallery = document.getElementById('moviesGallery');
       gallery.innerHTML = '';
-      (async () => {
-        for (const item of data.entries) {
-          const details = await fetchTmdbDetails(item.Type, item.TMDB_ID);
+      // Fetch all TMDb details in parallel for better performance
+      const detailPromises = data.entries.map(item =>
+        fetchTmdbDetails(item.Type, item.TMDB_ID)
+      );
+      const detailsList = await Promise.all(detailPromises);
 
-          const div = document.createElement('div');
-          div.className = 'col-6 col-sm-4 col-md-4 col-lg-3';
-          div.innerHTML = `
-            <div class="card mb-4 position-relative">
-              <img src="${IMG_BASE}${details.poster_path}" class="card-img-top" alt="${details.title || details.name}">
-            </div>
-          `;
-          gallery.appendChild(div);
-        }
-      })();
-      // Select d’options de vote
+      detailsList.forEach((details, index) => {
+        const div = document.createElement('div');
+        div.className = 'col-6 col-sm-4 col-md-4 col-lg-3';
+        div.innerHTML = `
+          <div class="card mb-4 position-relative">
+            <img src="${IMG_BASE}${details.poster_path}" class="card-img-top" alt="${details.title || details.name}">
+          </div>
+        `;
+        gallery.appendChild(div);
+      });
+      // Select d’options de vote with title/name labels
       const sel = document.getElementById('voteSelect');
-      sel.innerHTML = data.entries.map(opt =>
-        `<option value="${opt.Type}|${opt.TMDB_ID}">${opt.Type === "movie" ? "🎬" : "📺"} ${opt.TMDB_ID}</option>`
-      ).join('');
+      sel.innerHTML = data.entries.map((opt, index) => {
+        const details = detailsList[index];
+        const title = details.title || details.name || opt.TMDB_ID;
+        const icon = opt.Type === "movie" ? "🎬" : "📺";
+        return `<option value="${opt.Type}|${opt.TMDB_ID}">${icon} ${title}</option>`;
+      }).join('');
     }
 
     // 3. Gérer le vote
@@ -141,7 +171,7 @@
         const val = document.getElementById('voteSelect').value;
         if (!val) return;
         const [type, tmdb_id] = val.split('|');
-        const user_id = 1; // ou votre méthode pour récupérer l'ID de l'utilisateur
+        const user_id = USER_ID;
         const res = await fetch(
             './php/playset_bdd_access.php?action=user_vote',
             {
@@ -179,10 +209,10 @@
             }
             return;
         }
-
-        // 3. Préparation des labels et des valeurs
-        const labels = data.results.map(e => e.title || e.tmdb_id);
-        const votes  = data.results.map(e => e.votes);
+        // Build labels (fetch titles asynchronously)
+        const labelPromises = data.results.map(e => fetchTitleById(e.type, e.tmdb_id));
+        const labels = await Promise.all(labelPromises);
+        const votes = data.results.map(e => e.votes);
 
         // 4. Si le graphique n'existe pas encore, on le crée
         if (!chart) {
@@ -201,7 +231,18 @@
             },
             options: {
                 plugins: {
-                legend: { display: false }
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                return context[0].label;
+                            },
+                            label: function(context) {
+                                const votes = context.parsed || context.raw;
+                                return `${votes} vote(s)`;
+                            }
+                        }
+                    }
                 },
                 cutout: '65%'
             }
@@ -214,81 +255,8 @@
         chart.update();
     }
     }
-    setInterval(updateChart, 3500);
 
     // 5. Timer
-    function setupTimer(end) {
-      function updateTimer() {
-        const endTime = new Date(end);
-        const now = new Date();
-        let diff = Math.max(0, endTime - now) / 1000;
-        const j = Math.floor(diff / 86400); diff %= 86400;
-        const h = Math.floor(diff / 3600); diff %= 3600;
-        const m = Math.floor(diff / 60); diff %= 60;
-        const s = Math.floor(diff);
-        document.getElementById('voteTimer').textContent = `${j}J : ${h}H : ${m}M : ${s}S`;
-        if (endTime - now > 0) setTimeout(updateTimer, 1000);
-      }
-      updateTimer();
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-        loadVoteSession();
-    });
-
-    // After loading session and chart, check if user already voted
-    async function checkUserVoted() {
-      const user_id = 1; // Replace with actual user ID or session value
-      const res = await fetch(`./php/playset_bdd_access.php?action=has_voted&user_id=${user_id}&vote_id=${VOTE_ID}`);
-      const data = await res.json();
-      if (data.voted) {
-        const btn = document.getElementById('voteBtn');
-        btn.disabled = true;
-        btn.textContent = 'Vous avez déjà voté';
-      }
-    }
-    window.addEventListener('DOMContentLoaded', () => {
-      loadVoteSession();
-      checkUserVoted();
-    });
-
-    function updateSelectedPoster(details) {
-    const posterDiv = document.getElementById('selectedPoster');
-    if (details && details.poster_path) {
-        posterDiv.innerHTML = `<img src="${IMG_BASE}${details.poster_path}" alt="Affiche" style="max-height:140px;">`;
-    } else {
-        posterDiv.innerHTML = '';
-    }
-    }
-
-    const sel = document.getElementById('voteSelect');
-    sel.onchange = async function() {
-    const val = sel.value;
-    if (!val) return updateSelectedPoster(null);
-    const [type, tmdb_id] = val.split('|');
-    const details = await fetchTmdbDetails(type, tmdb_id);
-    updateSelectedPoster(details);
-    };
-    // Affichage initial de l’affiche (si option par défaut)
-    if (sel.options.length) {
-    const [type, tmdb_id] = sel.options[0].value.split('|');
-    fetchTmdbDetails(type, tmdb_id).then(updateSelectedPoster);
-    }
-
-    // Dès qu'on sélectionne une œuvre, on affiche l'affiche (desktop)
-    sel.onchange = async function() {
-    const val = sel.value;
-    if (!val) return updateSelectedPoster(null);
-    const [type, tmdb_id] = val.split('|');
-    const details = await fetchTmdbDetails(type, tmdb_id);
-    updateSelectedPoster(details);
-    };
-    // Affiche par défaut la première affiche
-    if (sel.options.length) {
-    const [type, tmdb_id] = sel.options[0].value.split('|');
-    fetchTmdbDetails(type, tmdb_id).then(updateSelectedPoster);
-    }
-
     function setupTimer(end) {
         function updateTimer() {
             const endTime = new Date(end);
@@ -324,19 +292,54 @@
             setTimeout(updateTimer, 1000);
         }
         updateTimer();
-        }
+    }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            loadVoteSession()
-            .then(() => {
+    // After loading session and chart, check if user already voted
+    async function checkUserVoted() {
+      const user_id = USER_ID;
+      const res = await fetch(`./php/playset_bdd_access.php?action=has_voted&vote_id=${VOTE_ID}`);
+      const data = await res.json();
+      if (data.voted) {
+        const btn = document.getElementById('voteBtn');
+        btn.disabled = true;
+        btn.textContent = 'Vous avez déjà voté';
+      }
+    }
+
+    function updateSelectedPoster(details) {
+      const posterDiv = document.getElementById('selectedPoster');
+      if (details && details.poster_path) {
+          posterDiv.innerHTML = `<img src="${IMG_BASE}${details.poster_path}" alt="Affiche" style="max-height:140px;">`;
+      } else {
+          posterDiv.innerHTML = '';
+      }
+    }
+
+    const sel = document.getElementById('voteSelect');
+    sel.onchange = async function() {
+      const val = sel.value;
+      if (!val) return updateSelectedPoster(null);
+      const [type, tmdb_id] = val.split('|');
+      const details = await fetchTmdbDetails(type, tmdb_id);
+      updateSelectedPoster(details);
+    };
+    // Affichage initial de l’affiche (si option par défaut)
+    if (sel.options.length) {
+      const [type, tmdb_id] = sel.options[0].value.split('|');
+      fetchTmdbDetails(type, tmdb_id).then(updateSelectedPoster);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        loadVoteSession()
+        .then(() => {
             // Après avoir chargé la session (bannière, timer, galerie, etc.), on affiche le graphique une première fois
             updateChart();
             // Puis on rafraîchit toutes les 3500 ms
             setInterval(updateChart, 3500);
             // Et on vérifie si l'utilisateur a déjà voté
             checkUserVoted();
-            });
         });
+    });
         
   </script>
 </body>

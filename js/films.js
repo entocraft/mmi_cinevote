@@ -35,20 +35,26 @@ async function fetchPopularMovies() {
   isFetching = true;
 
   try {
-    const params = new URLSearchParams({ ...TMDB_PARAMS, page: currentPage });
-    const TMDB_URL = `https://api.themoviedb.org/3/discover/${currentType}?${params.toString()}`;
-
-    const response = await fetch(TMDB_URL, OPTIONS);
-    if (!response.ok) throw new Error('Statut HTTP ' + response.status);
+    const response = await fetch(`./php/get_movies.php?page=${currentPage}&type=${currentType}`);
+    if (!response.ok) throw new Error('Erreur de récupération depuis la base de données');
 
     const data = await response.json();
+    const movies = data.map(movie => ({
+      id: movie.TMDB_ID,
+      title: movie.Name,
+      overview: movie.Description || '',
+      vote_average: movie.Rating || 'N/A',
+      release_date: movie.Date,
+      poster_path: movie.Poster_Img,
+      backdrop_path: movie.Banner_Img
+    }));
 
-    renderMovieCards(data.results);
+    renderMovieCards(movies);
 
     currentPage++;
-    hasMorePages = currentPage <= data.total_pages;
+    hasMorePages = data.length >= 20;
   } catch (err) {
-    console.error('Erreur fetchPopularMovies:', err);
+    console.error('Erreur fetchPopularMovies (BDD):', err);
   } finally {
     isFetching = false;
   }
@@ -56,7 +62,6 @@ async function fetchPopularMovies() {
 
 async function fetchSearchResults(query) {
   if (!query.trim()) {
-    // Revenir au contenu classique
     currentSearchQuery = '';
     currentPage = 1;
     hasMorePages = true;
@@ -68,20 +73,30 @@ async function fetchSearchResults(query) {
   isFetching = true;
 
   try {
-    const searchURL = `https://api.themoviedb.org/3/search/${currentType}?query=${encodeURIComponent(query)}&page=${currentPage}&include_adult=false`;
-    const res = await fetch(searchURL, OPTIONS);
-    const data = await res.json();
+    const response = await fetch(`./php/get_movies.php?search=${encodeURIComponent(query)}&page=${currentPage}&type=${currentType}`);
+    if (!response.ok) throw new Error('Erreur de recherche');
+
+    const data = await response.json();
+    const movies = data.map(movie => ({
+      id: movie.TMDB_ID,
+      title: movie.Name,
+      overview: movie.Description || '',
+      vote_average: movie.Rating || 'N/A',
+      release_date: movie.Date,
+      poster_path: movie.Poster_Img,
+      backdrop_path: movie.Banner_Img
+    }));
 
     if (currentPage === 1) cardContainer.innerHTML = '';
-    renderMovieCards(data.results);
+    renderMovieCards(movies);
 
-    if (currentPage >= data.total_pages) {
+    if (data.length < 20) {
       hasMorePages = false;
     } else {
       currentPage++;
     }
   } catch (e) {
-    console.error("Erreur recherche TMDb :", e);
+    console.error("Erreur recherche via BDD :", e);
   } finally {
     isFetching = false;
   }

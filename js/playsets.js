@@ -1,10 +1,22 @@
 async function loadPlaysets() {
-  const userId = 1; // À remplacer dynamiquement
+  const userId = window.currentUserId ?? null; // injecté côté PHP
+  if (!userId) {
+    console.error('User ID introuvable : assurez‑vous que window.currentUserId est défini.');
+    return;
+  }
 
   try {
     const res = await fetch(`./php/playset_bdd_access.php?action=list&user_id=${userId}`);
     const data = await res.json();
+    console.log('DATA FETCHED:', data);
 
+    // Sécurise la structure reçue :
+    const playsets = Array.isArray(data.playsets) ? data.playsets : [];
+    if (playsets.length === 0) {
+      console.warn('Aucun playset trouvé ou structure invalide :', data);
+    }
+
+    // DOM container
     const container = document.getElementById('playsetGrid');
     container.innerHTML = '';
 
@@ -17,7 +29,7 @@ async function loadPlaysets() {
     `;
     container.appendChild(createCol);
 
-    data.playsets.forEach(p => {
+    playsets.forEach(p => {
       const bannerUrl = p.Banner
         ? `https://image.tmdb.org/t/p/w500${p.Banner}`
         : 'https://via.placeholder.com/500x500?text=No+Banner';
@@ -35,7 +47,7 @@ async function loadPlaysets() {
       `;
 
       card.addEventListener('click', () => {
-        window.location.href = `playset.html?id=${p.ID}`;
+        window.location.href = `playset.php?id=${p.ID}`;
       });
 
       col.appendChild(card);
@@ -62,7 +74,11 @@ document.getElementById('createPlaysetForm').addEventListener('submit', async fu
 
   if (!name) return;
 
-  const userId = 1; // À remplacer par l’ID dynamique si tu as une gestion de session
+  const userId = window.currentUserId ?? null;
+  if (!userId) {
+    alert("Utilisateur non identifié ; impossible de créer le playset.");
+    return;
+  }
   const res = await fetch('./php/playset_bdd_access.php?action=create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

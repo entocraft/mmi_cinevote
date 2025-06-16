@@ -1,3 +1,10 @@
+<?php
+session_start();
+if (!isset($_SESSION['user'])) {
+    header('Location: login_form.php');
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -111,7 +118,7 @@
       <div class="container">
         <ul class="nav">
           <li class="nav-item">
-            <a class="nav-link text-white" href="#">Accueil</a>
+            <a class="nav-link text-white" href="index.php">Accueil</a>
           </li>
           <li class="nav-item">
             <a class="nav-link text-white" href="#">Films</a>
@@ -157,10 +164,10 @@
   </main>
 
   <!-- Bootstrap JS Bundle (optionnel) -->
-  <script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-  ></script>
-  <!-- Ton script qui fait le fetch et génère les cartes -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    window.currentUserId = <?= $_SESSION['user']['id'] ?? 'null' ?>;
+  </script>
   <script src="js/films.js"></script>
   <script src="js/playsets.js"></script>
 </body>

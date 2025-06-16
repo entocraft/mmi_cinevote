@@ -1,4 +1,11 @@
 <?php
+session_set_cookie_params([
+    'domain' => '.get-media.fr',
+    'path' => '/',
+    'secure' => false,
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
 session_start();
 
 // Affiche toutes les erreurs PHP (utile pour déboguer le 500)
@@ -7,7 +14,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 // Si l’utilisateur est déjà connecté, on le redirige
-if (isset($_SESSION['user_id'])) {
+if (!empty($_SESSION['user'])) {
     header('Location: ../index.php');
     exit;
 }
@@ -26,16 +33,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Récupérer le hash bcrypt depuis la BDD
-    $stmt = $pdo->prepare('SELECT ID, Passwd FROM Users WHERE Username = ?');
+    $stmt = $pdo->prepare('SELECT ID, Passwd, Grade FROM Users WHERE Username = ?');
     $stmt->execute([$username]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($user && password_verify($password, $user['Passwd'])) {
-        // Authentification réussie : on stocke en session et on redirige
-        $_SESSION['user_id']  = $user['id'];
+        $_SESSION['user'] = [
+            'id'    => $user['ID'],
+            'name'  => $username,
+            'grade' => (int)$user['Grade']
+        ];
+        // variables legacy pour compatibilité avec l’ancien code
+        $_SESSION['user_id']  = $user['ID'];
         $_SESSION['username'] = $username;
-        header('Location: ../index.html');
+        header('Location: ../index.php');
         exit;
     } else {
         // Échec d’authentification
