@@ -1,6 +1,15 @@
 <?php
+
 session_start();
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 $userIdSession = $_SESSION['user']['id'] ?? ($_SESSION['user_id'] ?? null);
+// Fallback : si la session est vide mais user_id est passé en GET (ex: debug)
+if (!$userIdSession && isset($_GET['user_id'])) {
+    $userIdSession = (int) $_GET['user_id'];
+}
 
 file_put_contents("debug.log", file_get_contents("php://input") . PHP_EOL, FILE_APPEND);
 
@@ -122,8 +131,21 @@ case 'create':
 
 case 'add':
     $data = json_decode(file_get_contents("php://input"), true);
-    $stmt = $pdo->prepare("INSERT INTO FilmsPlayset (PlaysetID, Type, TMDB_ID) VALUES (?, ?, ?)");
-    $stmt->execute([$data['playset_id'], $data['type'], $data['tmdb_id']]);
+
+    $playsetId = $data['playset_id'] ?? null;
+    $type      = $data['type']       ?? null;
+    $filmId    = $data['film_id']    ?? null;   // nouvel ID interne
+    $tmdbId    = $data['tmdb_id']    ?? null;   // compat ancien front
+
+
+    if (!$playsetId || !$filmId || !$type) {
+        echo json_encode(['success' => false, 'error' => 'Paramètres manquants']);
+        exit;
+    }
+
+    $stmt = $pdo->prepare("INSERT INTO FilmsPlayset (PlaysetID, TMDB_ID, FilmID, Type) VALUES (?, ?, ?, ?)");
+    $stmt->execute([$playsetId, $tmdbId, $filmId, $type]);
+
     echo json_encode(['success' => true]);
     break;
 
@@ -256,7 +278,36 @@ case 'get_vote_session':
     ]);
     break;
 
+case 'get_active_vote':
+    $playset_id = $_GET['playset_id'] ?? null;
+    if (!$playset_id) {
+        echo json_encode(['active' => false, 'error' => 'playset_id manquant']);
+        exit;
+    }
+    $stmt = $pdo->prepare("
+        SELECT ID, Name, End
+        FROM PlaysetVote
+        WHERE PlaysetID = ?
+          AND End > NOW()
+        ORDER BY End ASC
+        LIMIT 1
+    ");
+    $stmt->execute([$playset_id]);
+    $vote = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($vote) {
+        echo json_encode([
+            'active'  => true,
+            'vote_id' => $vote['ID'],
+            'name'    => $vote['Name'],
+            'end'     => $vote['End']
+        ]);
+    } else {
+        echo json_encode(['active' => false]);
+    }
+    break;
+
 default:
     echo json_encode(['error' => 'Action inconnue']);
+    http_response_code(400);
     break;
 }

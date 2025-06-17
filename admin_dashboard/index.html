@@ -24,11 +24,45 @@
           </div>
 
           <!-- Zone de recherche TMDB -->
-          <div id="tmdbSearchArea">
+          <form id="tmdbForm" onsubmit="return false;">
             <label class="form-label">Titre du film</label>
+            <small id="tmdbIdDisplay" class="text-muted d-block mt-1"></small>
             <input class="form-control" id="tmdbQuery" placeholder="Tape un titre…">
             <ul class="list-group mt-2" id="tmdbResults"></ul>
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="addSeriesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <form id="addSeriesForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Ajouter une série</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Choix TMDB ou manuel -->
+          <div class="mb-3 form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="useTmdb" checked>
+            <label class="form-check-label" for="useTmdb">Rechercher sur TMDb</label>
           </div>
+
+          <!-- Zone de recherche TMDB -->
+          <form id="tmdbForm" onsubmit="return false;">
+            <label class="form-label">Titre du film</label>
+            <small id="tmdbSeriesIdDisplay" class="text-muted d-block mt-1"></small>
+            <input class="form-control" id="tmdbQuerySeries" placeholder="Tape un titre…">
+            <ul class="list-group mt-2" id="tmdbResultsSeries"></ul>
+          </form>
         </div>
 
         <div class="modal-footer">
@@ -43,11 +77,13 @@
     <h1>🎬 Admin Dashboard</h1>
     <ul class="nav nav-tabs" id="adminTabs">
       <li class="nav-item"><a class="nav-link active" data-tab="films">Films</a></li>
+      <li class="nav-item"><a class="nav-link" data-tab="series" href="#">Séries</a></li>
       <li class="nav-item"><a class="nav-link" data-tab="playsets">Playsets</a></li>
       <li class="nav-item"><a class="nav-link" data-tab="users">Utilisateurs</a></li>
     </ul>
 
     <button class="btn btn-success my-3" id="addFilmBtn">+ Ajouter un film</button>
+    <button class="btn btn-success my-3" id="addSeriesBtn">+ Ajouter une série</button>
     <div class="mt-4" id="tab-content">
       <!-- Content loaded by JS -->
     </div>

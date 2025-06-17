@@ -115,6 +115,24 @@ if (!isset($_SESSION['user_id'])) {
     </div>
   </div>
   
+ <header class="bg-dark text-white py-3">
+    <nav>
+      <div class="container">
+        <ul class="nav">
+          <li class="nav-item">
+            <a class="nav-link text-white" href="index.php">Accueil</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="php/logout.php">Se déconnecter</a>
+          </li>
+          <?php if (isset($_SESSION['user']) && $_SESSION['user'] == 1): ?>
+            <li class="nav-item">
+              <a class="nav-link text-white" href="./admin_dashboard/index.html">Admin</a>
+            </li>
+          <?php endif; ?>
+        </ul>
+      </div>
+  </header>
 
 <body>
     <div class="banner" id="playsetBanner">
@@ -207,6 +225,19 @@ if (!isset($_SESSION['user_id'])) {
     loadPlayset();
 
     const editBtn = document.querySelector('.banner-overlay .bi-pencil-fill').closest('button');
+    async function checkActiveVote() {
+      const res  = await fetch(`./php/playset_bdd_access.php?action=get_active_vote&playset_id=${playsetId}`);
+      const info = await res.json();
+      if (info.active) {
+          const createBtn = document.getElementById('createVoteBtn');
+          const voteBtn   = document.createElement('a');
+          voteBtn.href    = `vote.php?vote_id=${info.vote_id}`;
+          voteBtn.className = 'btn btn-success mt-2';
+          voteBtn.innerHTML = '<i class="bi bi-bar-chart-line"></i> Aller au vote';
+          createBtn.replaceWith(voteBtn);
+      }
+    }
+    checkActiveVote();
     const editModal = new bootstrap.Modal(document.getElementById('editPlaysetModal'));
     const editForm = document.getElementById('editPlaysetForm');
     const nameInput = document.getElementById('editPlaysetName');
@@ -333,8 +364,7 @@ if (!isset($_SESSION['user_id'])) {
             const data = await res.json();
             if (data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('createVoteModal')).hide();
-                alert('Session de vote créée !');
-                // Tu peux ici appeler une fonction pour afficher le vote créé, ou recharger la liste des votes
+                window.location.reload();
             } else {
                 alert(data.error || "Erreur lors de la création du vote.");
             }

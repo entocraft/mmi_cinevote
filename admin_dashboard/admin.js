@@ -1,13 +1,43 @@
 document.addEventListener("DOMContentLoaded", () => {
-  loadTab("films");
+  loadTab(currentTab);
 
   document.querySelectorAll("[data-tab]").forEach(tab => {
     tab.addEventListener("click", (e) => {
       document.querySelectorAll(".nav-link").forEach(el => el.classList.remove("active"));
       e.target.classList.add("active");
+      currentTab = e.target.dataset.tab;
       loadTab(e.target.dataset.tab);
     });
   });
+});
+
+let currentTab = 'films';
+
+// Pagination for films
+let filmsCache = [];
+let filmCurrentPage = 1;
+const filmPageSize = 10;
+
+// Pagination for series
+let seriesCache = [];
+let seriesCurrentPage = 1;
+const seriesPageSize = 10;
+
+// Pagination for users
+let usersCache = [];
+let userCurrentPage = 1;
+const userPageSize = 10;
+
+// Ouvre les modaux d'ajout
+document.getElementById('addFilmBtn')?.addEventListener('click', () => {
+  currentTab = 'films';
+  const modal = new bootstrap.Modal(document.getElementById('addFilmModal'));
+  modal.show();
+});
+document.getElementById('addSeriesBtn')?.addEventListener('click', () => {
+  currentTab = 'series';
+  const modal = new bootstrap.Modal(document.getElementById('addSeriesModal'));
+  modal.show();
 });
 
 const TMDB_BEARER = 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhYzhmMzliYWFiNThlOGZjMWU1MzU2ZmExMTY0NjE3NyIsIm5iZiI6MTc0ODg2NzkxNC41NTEsInN1YiI6IjY4M2Q5YjRhNGU4ODljZjA3NjY4OWQyMyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.yZegMUEuDzZ2DgNqy_uI6dwrWpLjItOOcmGbHhaqrDI';
@@ -31,6 +61,8 @@ async function addFilmViaTmdb(tmdbId) {
       if (modalEl) {
         const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
         modalInstance.hide();
+        document.body.classList.remove('modal-open');
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
       }
       // Recharge la liste des films
       loadTab('films');
@@ -42,9 +74,50 @@ async function addFilmViaTmdb(tmdbId) {
   }
 }
 
+async function addSeriesViaTmdb(tmdbId) {
+  if (!tmdbId) return;
+  try {
+    const res = await fetch('php/add_series.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tmdb_id: tmdbId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      const seriesModalEl = document.getElementById('addSeriesModal');
+      if (seriesModalEl) {
+        const seriesModalInstance = bootstrap.Modal.getInstance(seriesModalEl) || new bootstrap.Modal(seriesModalEl);
+        seriesModalInstance.hide();
+      }
+      document.body.classList.remove('modal-open');
+      document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    } else {
+      alert(data.error || 'Erreur lors de l\'ajout de la série.');
+    }
+    loadTab('series');
+  } catch (err) {
+    console.error('Erreur réseau :', err);
+  }
+}
+
 async function searchTmdb(query) {
   const res = await fetch(
     `https://api.themoviedb.org/3/search/movie?language=fr-FR&query=${encodeURIComponent(query)}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: TMDB_BEARER,
+        Accept: 'application/json'
+      }
+    }
+  );
+  const data = await res.json();
+  return data.results || [];
+}
+
+async function searchTmdbSeries(query) {
+  const res = await fetch(
+    `https://api.themoviedb.org/3/search/tv?language=fr-FR&query=${encodeURIComponent(query)}`,
     {
       method: 'GET',
       headers: {
@@ -75,7 +148,7 @@ if (tmdbInput && tmdbResults) {
       return;
     }
     debounceTimer = setTimeout(async () => {
-      const results = await searchTmdb(q);
+      const results = currentTab === 'series' ? await searchTmdbSeries(q) : await searchTmdb(q);
       const top3 = results.slice(0, 3);
 
       tmdbResults.innerHTML = top3.length
@@ -84,10 +157,13 @@ if (tmdbInput && tmdbResults) {
               ? `https://image.tmdb.org/t/p/w92${f.poster_path}`
               : 'https://via.placeholder.com/92x138?text=No+Image';
             return `
-              <li class="list-group-item list-group-item-action d-flex align-items-center gap-3"
+              <li class="list-group-item list-group-item-action d-flex align-items-start gap-3"
                   data-id="${f.id}">
                 <img src="${poster}" alt="" style="width:50px;height:auto;border-radius:4px;">
-                <span>${f.title} (${(f.release_date || '').slice(0, 4) || '—'})</span>
+                <div class="flex-grow-1">
+                  <div>${f.title || f.name} (${(f.release_date || f.first_air_date || '').slice(0, 4) || '—'})</div>
+                  <small class="text-muted">TMDb ID&nbsp;: ${f.id}</small>
+                </div>
               </li>`;
           }).join('')
         : '<li class="list-group-item">Aucun résultat</li>';
@@ -101,13 +177,19 @@ if (tmdbInput && tmdbResults) {
       buttonGroup.id = 'tmdbButtons';
       buttonGroup.className = 'mt-2 d-flex justify-content-end gap-2';
       buttonGroup.innerHTML = `
-        <button id="confirmTmdbBtn" class="btn btn-primary" disabled>Ajouter à la base</button>
-        <button id="manualFallbackBtn" class="btn btn-secondary">Modifier manuellement</button>
+        <button id="confirmTmdbBtn" class="btn btn-primary" type="button" disabled>Ajouter à la base</button>
+        <button id="manualFallbackBtn" class="btn btn-secondary" type="button">Modifier manuellement</button>
       `;
       tmdbResults.insertAdjacentElement('afterend', buttonGroup);
 
       // Bind button event listeners
       bindTmdbButtons();
+
+      /* ---------- Bloque la soumission du formulaire TMDb pour éviter le rafraîchissement ---------- */
+      document.getElementById('tmdbForm')?.addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+      });
 
       selectedTmdbId = null; // reset sélection
     }, 300);
@@ -122,6 +204,78 @@ if (tmdbInput && tmdbResults) {
     [...tmdbResults.children].forEach(el => el.classList.remove('active'));
     li.classList.add('active');
     // Enable the confirm button if present
+    document.getElementById('confirmTmdbBtn')?.removeAttribute('disabled');
+  });
+}
+
+// ---------- Suggestions TMDb pour Séries (3 résultats) ----------
+const tmdbInputSeries   = document.getElementById('tmdbQuerySeries');
+const tmdbResultsSeries = document.getElementById('tmdbResultsSeries');
+let debounceTimerSeries = null;
+
+if (tmdbInputSeries && tmdbResultsSeries) {
+  tmdbInputSeries.addEventListener('input', e => {
+    const q = e.target.value.trim();
+    clearTimeout(debounceTimerSeries);
+    if (q.length < 2) {
+      tmdbResultsSeries.innerHTML = '';
+      selectedTmdbId = null;
+      return;
+    }
+    debounceTimerSeries = setTimeout(async () => {
+      const results = await searchTmdbSeries(q);
+      const top3 = results.slice(0, 3);
+
+      tmdbResultsSeries.innerHTML = top3.length
+        ? top3.map(f => {
+            const poster = f.poster_path
+              ? `https://image.tmdb.org/t/p/w92${f.poster_path}`
+              : 'https://via.placeholder.com/92x138?text=No+Image';
+            return `
+              <li class="list-group-item list-group-item-action d-flex align-items-start gap-3"
+                  data-id="${f.id}">
+                <img src="${poster}" alt="" style="width:50px;height:auto;border-radius:4px;">
+                <div class="flex-grow-1">
+                  <div>${f.name} (${(f.first_air_date || '').slice(0, 4) || '—'})</div>
+                  <small class="text-muted">TMDb ID&nbsp;: ${f.id}</small>
+                </div>
+              </li>`;
+          }).join('')
+        : '<li class="list-group-item">Aucun résultat</li>';
+
+      // Remove previous buttons if they exist
+      const existingButtonsSeries = document.getElementById('tmdbButtons');
+      if (existingButtonsSeries) existingButtonsSeries.remove();
+
+      // Append buttons after the <ul>
+      const buttonGroupSeries = document.createElement('div');
+      buttonGroupSeries.id = 'tmdbButtons';
+      buttonGroupSeries.className = 'mt-2 d-flex justify-content-end gap-2';
+      buttonGroupSeries.innerHTML = `
+        <button id="confirmTmdbBtn" class="btn btn-primary" type="button" disabled>Ajouter à la base</button>
+        <button id="manualFallbackBtn" class="btn btn-secondary" type="button">Modifier manuellement</button>
+      `;
+      tmdbResultsSeries.insertAdjacentElement('afterend', buttonGroupSeries);
+
+      // Bind button event listeners
+      bindTmdbButtons();
+
+      // Bloque la soumission du formulaire
+      document.getElementById('tmdbFormSeries')?.addEventListener('submit', ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+      });
+
+      selectedTmdbId = null;
+    }, 300);
+  });
+
+  tmdbResultsSeries.addEventListener('click', e => {
+    const li = e.target.closest('li[data-id]');
+    if (!li) return;
+    selectedTmdbId = li.dataset.id;
+    [...tmdbResultsSeries.children].forEach(el => el.classList.remove('active'));
+    li.classList.add('active');
     document.getElementById('confirmTmdbBtn')?.removeAttribute('disabled');
   });
 }
@@ -141,18 +295,26 @@ function loadTab(tabName) {
       if (tabName === "films") renderFilms(data);
       if (tabName === "playsets") renderPlaysets(data);
       if (tabName === "users") renderUsers(data);
+      if (tabName === "series") renderSeries(data);
     })
     .catch(err => tabContent.innerHTML = "<p>Erreur de chargement.</p>");
 }
 
 function renderFilms(films) {
+  filmsCache = films;
+  const total = filmsCache.length;
+  const totalPages = Math.ceil(total / filmPageSize);
+  if (filmCurrentPage > totalPages) filmCurrentPage = totalPages || 1;
+  const start = (filmCurrentPage - 1) * filmPageSize;
+  const pageFilms = filmsCache.slice(start, start + filmPageSize);
+
   const tab = document.getElementById("tab-content");
   tab.innerHTML = `
     <h2>🎥 Films</h2>
     <table class="table table-bordered">
       <thead><tr><th>ID</th><th>Titre</th><th>Date</th><th>Actions</th></tr></thead>
       <tbody>
-        ${films.map(f => `
+        ${pageFilms.map(f => `
           <tr>
             <td>${f.ID}</td>
             <td>${f.Name || '(aucun nom)'}</td>
@@ -162,7 +324,143 @@ function renderFilms(films) {
         `).join("")}
       </tbody>
     </table>
+    <nav>
+      <ul class="pagination justify-content-center mt-2">
+        <li class="page-item ${filmCurrentPage === 1 ? 'disabled' : ''}">
+          <a class="page-link" href="#" onclick="changeFilmPage(${filmCurrentPage - 1}); return false;">Précédent</a>
+        </li>
+        <li class="page-item disabled">
+          <span class="page-link">Page ${filmCurrentPage} / ${totalPages}</span>
+        </li>
+        <li class="page-item ${filmCurrentPage === totalPages ? 'disabled' : ''}">
+          <a class="page-link" href="#" onclick="changeFilmPage(${filmCurrentPage + 1}); return false;">Suivant</a>
+        </li>
+      </ul>
+    </nav>
   `;
+}
+
+function changeFilmPage(page) {
+  if (page < 1) return;
+  const totalPages = Math.ceil(filmsCache.length / filmPageSize);
+  if (page > totalPages) return;
+  filmCurrentPage = page;
+  renderFilms(filmsCache);
+}
+
+function renderSeries(series) {
+  seriesCache = series;
+  const totalS = seriesCache.length;
+  const totalPagesS = Math.ceil(totalS / seriesPageSize);
+  if (seriesCurrentPage > totalPagesS) seriesCurrentPage = totalPagesS || 1;
+  const startS = (seriesCurrentPage - 1) * seriesPageSize;
+  const pageSeries = seriesCache.slice(startS, startS + seriesPageSize);
+
+  const tab = document.getElementById("tab-content");
+  tab.innerHTML =
+    `
+    <h2>📺 Séries</h2>
+    <table class="table table-bordered">
+      <thead><tr><th>ID</th><th>Titre</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody>
+        ${pageSeries.map(s => `
+          <tr>
+            <td>${s.ID}</td>
+            <td>${s.Name || '(aucun titre)'}</td>
+            <td>${s.Date || '—'}</td>
+            <td>
+              <button class="btn btn-danger btn-sm" onclick="deleteSeries(${s.ID})">🗑️ Supprimer</button>
+            </td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+    `
+    + `
+      <nav>
+        <ul class="pagination justify-content-center mt-2">
+          <li class="page-item ${seriesCurrentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changeSeriesPage(${seriesCurrentPage - 1}); return false;">Précédent</a>
+          </li>
+          <li class="page-item disabled">
+            <span class="page-link">Page ${seriesCurrentPage} / ${totalPagesS}</span>
+          </li>
+          <li class="page-item ${seriesCurrentPage === totalPagesS ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changeSeriesPage(${seriesCurrentPage + 1}); return false;">Suivant</a>
+          </li>
+        </ul>
+      </nav>
+    `;
+}
+
+function changeSeriesPage(page) {
+  if (page < 1) return;
+  const totalPagesS = Math.ceil(seriesCache.length / seriesPageSize);
+  if (page > totalPagesS) return;
+  seriesCurrentPage = page;
+  renderSeries(seriesCache);
+}
+
+/* ---------- Affichage paginé des utilisateurs (Users) ---------- */
+function renderUsers(data) {
+  // data may be array or { users: [...] }
+  const usersArray = Array.isArray(data) ? data : (data.users || []);
+  usersCache = usersArray;
+  const total = usersCache.length;
+  const totalPages = Math.ceil(total / userPageSize);
+  if (userCurrentPage > totalPages) userCurrentPage = totalPages || 1;
+  const start = (userCurrentPage - 1) * userPageSize;
+  const pageUsers = usersCache.slice(start, start + userPageSize);
+
+  const tab = document.getElementById("tab-content");
+  tab.innerHTML = `
+    <h2>👥 Utilisateurs</h2>
+    <table class="table table-bordered">
+      <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Grade</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody>
+        ${pageUsers.map(u => `
+          <tr>
+            <td>${u.ID}</td>
+            <td>${u.Username}</td>
+            <td>${u.Mail}</td>
+            <td>${u.Grade}</td>
+            <td>${u.Date}</td>
+            <td>
+              <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.ID})">🗑️ Supprimer</button>
+            </td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+    <nav>
+      <ul class="pagination justify-content-center mt-2">
+        <li class="page-item ${userCurrentPage === 1 ? 'disabled' : ''}">
+          <a class="page-link" href="#" onclick="changeUserPage(${userCurrentPage - 1}); return false;">Précédent</a>
+        </li>
+        <li class="page-item disabled">
+          <span class="page-link">Page ${userCurrentPage} / ${totalPages}</span>
+        </li>
+        <li class="page-item ${userCurrentPage === totalPages ? 'disabled' : ''}">
+          <a class="page-link" href="#" onclick="changeUserPage(${userCurrentPage + 1}); return false;">Suivant</a>
+        </li>
+      </ul>
+    </nav>
+  `;
+}
+
+function changeUserPage(page) {
+  if (page < 1) return;
+  const totalPages = Math.ceil(usersCache.length / userPageSize);
+  if (page > totalPages) return;
+  userCurrentPage = page;
+  renderUsers(usersCache);
+}
+
+function deleteUser(id) {
+  if (!confirm("Supprimer cet utilisateur ?")) return;
+  fetch(`php/delete_user.php?id=${id}`)
+    .then(() => loadTab("users"))
+    .catch(() => alert("Erreur lors de la suppression de l'utilisateur"));
 }
 
 function deleteFilm(id) {
@@ -171,12 +469,19 @@ function deleteFilm(id) {
     .then(() => loadTab("films"))
     .catch(() => alert("Erreur lors de la suppression"));
 }
+
+function deleteSeries(id) {
+  if (!confirm("Supprimer cette série ?")) return;
+  fetch(`php/delete_series.php?id=${id}`)
+    .then(() => loadTab('series'))
+    .catch(() => alert("Erreur lors de la suppression de la série"));
+}
 // Function to bind TMDb suggestion buttons
 function bindTmdbButtons() {
   document.getElementById('confirmTmdbBtn')?.addEventListener('click', () => {
-    if (selectedTmdbId) {
-      addFilmViaTmdb(selectedTmdbId);
-    }
+    if (!selectedTmdbId) return;
+    if (currentTab === 'films') addFilmViaTmdb(selectedTmdbId);
+    else if (currentTab === 'series') addSeriesViaTmdb(selectedTmdbId);
   });
 
   document.getElementById('manualFallbackBtn')?.addEventListener('click', () => {

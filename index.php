@@ -16,6 +16,7 @@ if (!isset($_SESSION['user'])) {
     <link rel="stylesheet" href="css/base.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
 </head>
+<body>
 
 <div class="modal fade" id="createPlaysetModal" tabindex="-1" aria-labelledby="createPlaysetModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -111,7 +112,7 @@ if (!isset($_SESSION['user'])) {
   </div>
   
 
-<body>
+ 
 
   <header class="bg-dark text-white py-3">
     <nav>
@@ -121,11 +122,13 @@ if (!isset($_SESSION['user'])) {
             <a class="nav-link text-white" href="index.php">Accueil</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link text-white" href="#">Films</a>
+            <a class="nav-link text-white" href="php/logout.php">Se déconnecter</a>
           </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="#">Séries</a>
-          </li>
+          <?php if (isset($_SESSION['user']) && $_SESSION['user'] == 1): ?>
+            <li class="nav-item">
+              <a class="nav-link text-white" href="./admin_dashboard/index.html">Admin</a>
+            </li>
+          <?php endif; ?>
         </ul>
       </div>
   </header>

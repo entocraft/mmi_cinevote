@@ -93,6 +93,8 @@ document.getElementById('createPlaysetForm').addEventListener('submit', async fu
     document.getElementById('createPlaysetForm').reset();
     if (typeof loadPlaysets === 'function') loadPlaysets(); // recharge la liste principale
     if (typeof loadUserPlaysets === 'function') loadUserPlaysets(); // recharge aussi la liste dans la modal d'ajout si besoin
+    // Rafraîchir la page après création du playset
+    window.location.reload();
   } else {
     alert(data.error || "Erreur lors de la création du playset.");
   }

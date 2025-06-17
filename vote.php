@@ -65,6 +65,26 @@ if (!$user_id) {
     .card-movie img { object-fit: cover; height: 260px; }
   </style>
 </head>
+
+ <header class="bg-dark text-white py-3">
+    <nav>
+      <div class="container">
+        <ul class="nav">
+          <li class="nav-item">
+            <a class="nav-link text-white" href="index.php">Accueil</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="php/logout.php">Se déconnecter</a>
+          </li>
+          <?php if (isset($_SESSION['user']) && $_SESSION['user'] == 1): ?>
+            <li class="nav-item">
+              <a class="nav-link text-white" href="./admin_dashboard/index.html">Admin</a>
+            </li>
+          <?php endif; ?>
+        </ul>
+      </div>
+  </header>
+
 <body>
   <div class="banner d-flex align-items-start justify-content-end" id="voteBanner">
     <div class="vote-card shadow-lg p-4">

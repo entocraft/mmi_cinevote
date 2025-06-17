@@ -35,12 +35,13 @@ async function fetchPopularMovies() {
   isFetching = true;
 
   try {
-    const response = await fetch(`./php/get_movies.php?page=${currentPage}&type=${currentType}`);
+    const response = await fetch(`./php/get_movies.php?page=${currentPage}&type=${getApiType()}`);
     if (!response.ok) throw new Error('Erreur de récupération depuis la base de données');
 
     const data = await response.json();
     const movies = data.map(movie => ({
       id: movie.TMDB_ID,
+      dbid: movie.ID,
       title: movie.Name,
       overview: movie.Description || '',
       vote_average: movie.Rating || 'N/A',
@@ -73,12 +74,13 @@ async function fetchSearchResults(query) {
   isFetching = true;
 
   try {
-    const response = await fetch(`./php/get_movies.php?search=${encodeURIComponent(query)}&page=${currentPage}&type=${currentType}`);
+    const response = await fetch(`./php/get_movies.php?search=${encodeURIComponent(query)}&page=${currentPage}&type=${getApiType()}`);
     if (!response.ok) throw new Error('Erreur de recherche');
 
     const data = await response.json();
     const movies = data.map(movie => ({
       id: movie.TMDB_ID,
+      dbid: movie.ID,
       title: movie.Name,
       overview: movie.Description || '',
       vote_average: movie.Rating || 'N/A',
@@ -176,6 +178,7 @@ document.getElementById('confirmAddToPlaysetBtn').addEventListener('click', asyn
       body: JSON.stringify({
         playset_id: playsetId,
         tmdb_id: movieToAdd.id,
+        film_id: movieToAdd.dbid,
         type: movieToAdd.type
       })
     });
@@ -221,7 +224,8 @@ function renderMovieCards(movies) {
 
     addButton.addEventListener('click', async () => {
       movieToAdd = {
-        id: movie.id,
+        id: movie.id,        // TMDB_ID
+        dbid: movie.dbid,    // internal DB ID
         title: movie.title || movie.name,
         type: currentType
       };
@@ -299,6 +303,10 @@ function renderMovieCards(movies) {
 }
 
 let currentType = 'movie';
+
+function getApiType() {
+  return currentType === 'series' ? 'tv' : currentType;
+}
 
 fetchPopularMovies();
 
