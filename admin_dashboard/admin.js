@@ -297,7 +297,10 @@ function renderFilms(films) {
             <td>${f.ID}</td>
             <td>${f.Name || '(aucun nom)'}</td>
             <td>${f.Date || '—'}</td>
-            <td><button class="btn btn-danger btn-sm" onclick="deleteFilm(${f.ID})">🗑️ Supprimer</button></td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary me-2" onclick="openEditFilmModal(${f.ID})">✏️ Modifier</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteFilm(${f.ID})">🗑️ Supprimer</button>
+            </td>
           </tr>
         `).join("")}
       </tbody>
@@ -347,7 +350,8 @@ function renderSeries(series) {
             <td>${s.Name || '(aucun titre)'}</td>
             <td>${s.Date || '—'}</td>
             <td>
-              <button class="btn btn-danger btn-sm" onclick="deleteSeries(${s.ID})">🗑️ Supprimer</button>
+              <button class="btn btn-sm btn-outline-primary me-2" onclick="openEditSeriesModal(${s.ID})">✏️ Modifier</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteSeries(${s.ID})">🗑️ Supprimer</button>
             </td>
           </tr>
         `).join("")}
@@ -468,3 +472,155 @@ function bindTmdbButtons() {
     document.getElementById('manualArea').classList.remove('d-none');
   });
 }
+
+// --- Edition d'un film ---
+async function openEditFilmModal(id) {
+  try {
+    const res = await fetch(`php/edit_film.php?id=${id}`);
+    const text = await res.text();  // read body once
+
+    if (!res.ok) {
+      console.error('edit_film.php HTTP error', res.status, text);
+      alert('Erreur serveur lors de la récupération du film.');
+      return;
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      console.error('Invalid JSON from edit_film.php:', parseErr, text);
+      alert('Réponse invalide du serveur.');
+      return;
+    }
+
+    if (!data.success) {
+      alert(data.error || 'Impossible de récupérer les informations du film.');
+      return;
+    }
+
+    const film = data.film;
+    document.getElementById('editFilmId').value = film.ID;
+    document.getElementById('editFilmName').value = film.Name || '';
+    document.getElementById('editFilmDescription').value = film.Description || '';
+    document.getElementById('editFilmDate').value = film.Date || '';
+    const modal = new bootstrap.Modal(document.getElementById('editFilmModal'));
+    modal.show();
+  } catch (err) {
+    console.error('Erreur réseau :', err);
+    alert('Erreur lors de la récupération du film.');
+  }
+}
+
+// --- Édition d'une série ---
+async function openEditSeriesModal(id) {
+  try {
+    // Appel GET pour récupérer les données de la série
+    const res = await fetch(`php/edit_series.php?id=${id}`);
+    const text = await res.text();  // on lit le corps une seule fois
+
+    if (!res.ok) {
+      console.error('edit_series.php HTTP error', res.status, text);
+      alert('Erreur serveur lors de la récupération de la série.');
+      return;
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      console.error('Invalid JSON from edit_series.php:', parseErr, text);
+      alert('Réponse invalide du serveur.');
+      return;
+    }
+
+    if (!data.success) {
+      alert(data.error || 'Impossible de récupérer les informations de la série.');
+      return;
+    }
+
+    const series = data.series;
+    // Remplissage du formulaire
+    document.getElementById('editSeriesId').value = series.ID;
+    document.getElementById('editSeriesName').value = series.Name || '';
+    document.getElementById('editSeriesDescription').value = series.Description || '';
+    document.getElementById('editSeriesDate').value = series.Date || '';
+
+    // Affichage du modal
+    const modal = new bootstrap.Modal(document.getElementById('editSeriesModal'));
+    modal.show();
+  } catch (err) {
+    console.error('Erreur réseau :', err);
+    alert('Erreur lors de la récupération de la série.');
+  }
+}
+
+// Handle edit form submission
+document.getElementById('editFilmForm')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const id = document.getElementById('editFilmId').value;
+  const name = document.getElementById('editFilmName').value.trim();
+  const description = document.getElementById('editFilmDescription').value.trim();
+  const date = document.getElementById('editFilmDate').value;
+  try {
+    const res = await fetch('php/edit_film.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name, description, date })
+    });
+    const data = await res.json();
+    if (data.success) {
+      // Hide modal and clean up backdrop
+      const modalEl = document.getElementById('editFilmModal');
+      const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+      modalInstance.hide();
+      document.body.classList.remove('modal-open');
+      document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+      // Reload films list
+      loadTab('films');
+    } else {
+      alert(data.error || 'Erreur lors de la modification du film.');
+    }
+  } catch (err) {
+    console.error('Erreur réseau :', err);
+  }
+});
+
+// Handle edit series form submission
+document.getElementById('editSeriesForm')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const id = document.getElementById('editSeriesId').value;
+  const name = document.getElementById('editSeriesName').value.trim();
+  const description = document.getElementById('editSeriesDescription').value.trim();
+  const date = document.getElementById('editSeriesDate').value;
+  try {
+    const res = await fetch('php/edit_series.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name, description, date })
+    });
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      alert('Réponse invalide du serveur.');
+      return;
+    }
+    if (data.success) {
+      // Hide modal and clean up backdrop
+      const modalEl = document.getElementById('editSeriesModal');
+      const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+      modalInstance.hide();
+      document.body.classList.remove('modal-open');
+      document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+      // Reload series list
+      loadTab('series');
+    } else {
+      alert(data.error || 'Erreur lors de la modification de la série.');
+    }
+  } catch (err) {
+    console.error('Erreur réseau :', err);
+    alert('Erreur réseau lors de la modification de la série.');
+  }
+});

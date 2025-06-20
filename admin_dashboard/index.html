@@ -7,6 +7,37 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 </head>
 <body class="bg-light">
+<div class="modal fade" id="editSeriesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <form id="editSeriesForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Modifier une série</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editSeriesId" name="id">
+          <div class="mb-3">
+            <label for="editSeriesName" class="form-label">Titre de la série</label>
+            <input type="text" class="form-control" id="editSeriesName" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label for="editSeriesDescription" class="form-label">Description</label>
+            <textarea class="form-control" id="editSeriesDescription" name="description" rows="3"></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="editSeriesDate" class="form-label">Date de première diffusion</label>
+            <input type="date" class="form-control" id="editSeriesDate" name="date">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 <div class="modal fade" id="addFilmModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -30,6 +61,37 @@
           </form>
         </div>
 
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="editFilmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <form id="editFilmForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Modifier un film</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editFilmId" name="id">
+          <div class="mb-3">
+            <label for="editFilmName" class="form-label">Titre du film</label>
+            <input type="text" class="form-control" id="editFilmName" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label for="editFilmDescription" class="form-label">Description</label>
+            <textarea class="form-control" id="editFilmDescription" name="description" rows="3"></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="editFilmDate" class="form-label">Date de sortie</label>
+            <input type="date" class="form-control" id="editFilmDate" name="date">
+          </div>
+        </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
           <button type="submit" class="btn btn-primary">Enregistrer</button>
