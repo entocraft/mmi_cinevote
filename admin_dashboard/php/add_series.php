@@ -1,11 +1,9 @@
 <?php
-/* API d'ajout de séries via TMDb – accès grade = 1 */
 session_start();
 header('Content-Type: application/json');
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-// Sécurité session
 if (empty($_SESSION['user']) || ($_SESSION['user']['grade'] ?? 0) !== 1) {
     http_response_code(403);
     echo json_encode(['error' => 'Accès interdit']);
@@ -15,7 +13,6 @@ if (empty($_SESSION['user']) || ($_SESSION['user']['grade'] ?? 0) !== 1) {
 require_once '../../php/db.php';
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-// Récupération du JSON
 $data = json_decode(file_get_contents('php://input'), true) ?: [];
 $tmdbId = intval($data['tmdb_id'] ?? 0);
 if ($tmdbId <= 0) {
@@ -24,7 +21,6 @@ if ($tmdbId <= 0) {
     exit;
 }
 
-// Authentification TMDb – token codé en dur
 $bearer = 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhYzhmMzliYWFiNThlOGZjMWU1MzU2ZmExMTY0NjE3NyIsIm5iZiI6MTc0ODg2NzkxNC41NTEsInN1YiI6IjY4M2Q5YjRhNGU4ODljZjA3NjY4OWQyMyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.yZegMUEuDzZ2DgNqy_uI6dwrWpLjItOOcmGbHhaqrDI';
 
 $ch = curl_init("https://api.themoviedb.org/3/tv/{$tmdbId}?language=fr-FR");
@@ -52,14 +48,12 @@ if (empty($tmdb['name'])) {
     exit;
 }
 
-// Préparation des données
 $name       = $tmdb['name'];
 $overview   = $tmdb['overview']         ?? null;
 $firstAir   = $tmdb['first_air_date']   ?? null;
 $poster     = $tmdb['poster_path']      ?? null;
 $backdrop   = $tmdb['backdrop_path']    ?? null;
 
-// Insert + update on duplicate
 try {
     $stmt = $pdo->prepare("
       INSERT INTO Series

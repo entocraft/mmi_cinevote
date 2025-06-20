@@ -4,9 +4,8 @@ if (isset($_SESSION['user_id'])) {
     header('Location: index.php');
     exit;
 }
-require __DIR__ . '/db.php'; // Connexion PDO
+require __DIR__ . '/db.php';
 
-// Activer l'affichage des erreurs pour diagnostiquer d’éventuelles erreurs 500
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -39,7 +38,6 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
-// Vérifier si l’email existe déjà
 $stmt = $pdo->prepare('SELECT ID FROM Users WHERE Mail = ?');
 $stmt->execute([$email]);
 if ($stmt->fetch()) {
@@ -48,7 +46,6 @@ if ($stmt->fetch()) {
     exit;
 }
 
-// Vérifier si l’email existe déjà
 $stmt = $pdo->prepare('SELECT ID FROM Users WHERE Username = ?');
 $stmt->execute([$username]);
 if ($stmt->fetch()) {
@@ -57,11 +54,9 @@ if ($stmt->fetch()) {
     exit;
 }
 
-// Générer un hash bcrypt cost=10
 $options = ['cost' => 10];
 $password_hash = password_hash($password, PASSWORD_BCRYPT, $options);
 
-// Insérer le nouvel utilisateur
 $stmt = $pdo->prepare('INSERT INTO Users (Username, Mail, Passwd, Date) VALUES (?, ?, ?, NOW())');
 $success = $stmt->execute([$username, $email, $password_hash]);
 
@@ -71,11 +66,9 @@ if (!$success) {
     exit;
 }
 
-// Récupérer l’ID de l’utilisateur fraîchement créé
 $user_id = $pdo->lastInsertId();
 $_SESSION['user_id'] = $user_id;
 $_SESSION['username'] = $username;
 
-// Rediriger vers la page d’accueil
 header('Location: ../index.php');
 exit;

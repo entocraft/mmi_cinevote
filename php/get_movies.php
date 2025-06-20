@@ -34,7 +34,6 @@ try {
     $stmt->execute();
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Compléter les données vides avec TMDb si nécessaire
     foreach ($results as &$item) {
         $tmdb_id = $item['TMDB_ID'];
         $needsUpdate = false;

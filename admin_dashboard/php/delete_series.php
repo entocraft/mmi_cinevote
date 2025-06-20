@@ -1,5 +1,4 @@
 <?php
-/* API de suppression de série par ID interne */
 session_start();
 header('Content-Type: application/json');
 ini_set('display_errors', 1);

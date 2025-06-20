@@ -44,10 +44,9 @@ if (bannerSearchBtn) {
         return;
       }
   
-      // On récupère les backdrops de chaque résultat (movie ou tv)
       let allImages = [];
   
-      for (const result of data.results.slice(0, 5)) { // max 5 résultats pour éviter trop d'appels
+      for (const result of data.results.slice(0, 5)) {
         if (!['movie', 'tv'].includes(result.media_type)) continue;
   
         const detailsRes = await fetch(`https://api.themoviedb.org/3/${result.media_type}/${result.id}?language=fr-FR&append_to_response=images`, {
@@ -60,7 +59,6 @@ if (bannerSearchBtn) {
         const details = await detailsRes.json();
         const backdrops = (details.images?.backdrops || []);
 
-        // Si aucune image dans .images.backdrops, on utilise .backdrop_path
         if (backdrops.length === 0 && details.backdrop_path) {
             allImages.push(details.backdrop_path);
         } else {
@@ -68,12 +66,10 @@ if (bannerSearchBtn) {
         }
       }
   
-      // Affichage des images
       bannerOptions.innerHTML = allImages.map(path => `
         <img src="https://image.tmdb.org/t/p/w300${path}" data-path="${path}" class="img-thumbnail m-2" style="cursor:pointer; max-width: 50%;">
       `).join('');
   
-      // Écouteurs sur chaque image
       bannerOptions.querySelectorAll('img').forEach(img => {
         img.addEventListener('click', async () => {
           const path = img.getAttribute('data-path');

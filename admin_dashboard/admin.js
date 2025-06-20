@@ -13,22 +13,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
 let currentTab = 'films';
 
-// Pagination for films
 let filmsCache = [];
 let filmCurrentPage = 1;
 const filmPageSize = 10;
 
-// Pagination for series
 let seriesCache = [];
 let seriesCurrentPage = 1;
 const seriesPageSize = 10;
 
-// Pagination for users
 let usersCache = [];
 let userCurrentPage = 1;
 const userPageSize = 10;
 
-// Ouvre les modaux d'ajout
 document.getElementById('addFilmBtn')?.addEventListener('click', () => {
   currentTab = 'films';
   const modal = new bootstrap.Modal(document.getElementById('addFilmModal'));
@@ -42,7 +38,6 @@ document.getElementById('addSeriesBtn')?.addEventListener('click', () => {
 
 const TMDB_BEARER = 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhYzhmMzliYWFiNThlOGZjMWU1MzU2ZmExMTY0NjE3NyIsIm5iZiI6MTc0ODg2NzkxNC41NTEsInN1YiI6IjY4M2Q5YjRhNGU4ODljZjA3NjY4OWQyMyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.yZegMUEuDzZ2DgNqy_uI6dwrWpLjItOOcmGbHhaqrDI';
 
-/* ---------- Ajout du film via TMDb ---------- */
 async function addFilmViaTmdb(tmdbId) {
   if (!tmdbId) return;
 
@@ -56,7 +51,6 @@ async function addFilmViaTmdb(tmdbId) {
     const data = await res.json();
 
     if (data.success) {
-      // Ferme le modal s'il existe
       const modalEl = document.getElementById('addFilmModal');
       if (modalEl) {
         const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
@@ -64,7 +58,6 @@ async function addFilmViaTmdb(tmdbId) {
         document.body.classList.remove('modal-open');
         document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
       }
-      // Recharge la liste des films
       loadTab('films');
     } else {
       alert(data.error || 'Erreur lors de l\'ajout du film.');
@@ -130,15 +123,13 @@ async function searchTmdbSeries(query) {
   return data.results || [];
 }
 
-/* ---------- Suggestions TMDb (3 résultats) ---------- */
-const tmdbInput   = document.getElementById('tmdbQuery');   // champ de saisie
-const tmdbResults = document.getElementById('tmdbResults'); // <ul> pour afficher les résultats
-let selectedTmdbId = null;                                  // id du film choisi
+const tmdbInput   = document.getElementById('tmdbQuery');
+const tmdbResults = document.getElementById('tmdbResults');
+let selectedTmdbId = null;
 let debounceTimer  = null;
 
 if (tmdbInput && tmdbResults) {
 
-  // Recherche déclenchée au fil de la frappe (debounce 300 ms)
   tmdbInput.addEventListener('input', e => {
     const q = e.target.value.trim();
     clearTimeout(debounceTimer);
@@ -168,11 +159,9 @@ if (tmdbInput && tmdbResults) {
           }).join('')
         : '<li class="list-group-item">Aucun résultat</li>';
 
-      // Remove previous buttons if they exist
       const existingButtons = document.getElementById('tmdbButtons');
       if (existingButtons) existingButtons.remove();
 
-      // Append buttons after the <ul>
       const buttonGroup = document.createElement('div');
       buttonGroup.id = 'tmdbButtons';
       buttonGroup.className = 'mt-2 d-flex justify-content-end gap-2';
@@ -182,33 +171,27 @@ if (tmdbInput && tmdbResults) {
       `;
       tmdbResults.insertAdjacentElement('afterend', buttonGroup);
 
-      // Bind button event listeners
       bindTmdbButtons();
 
-      /* ---------- Bloque la soumission du formulaire TMDb pour éviter le rafraîchissement ---------- */
       document.getElementById('tmdbForm')?.addEventListener('submit', (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
       });
 
-      selectedTmdbId = null; // reset sélection
+      selectedTmdbId = null;
     }, 300);
   });
 
-  // Sélection d'un film : sur clic on marque "active"
   tmdbResults.addEventListener('click', e => {
     const li = e.target.closest('li[data-id]');
     if (!li) return;
     selectedTmdbId = li.dataset.id;
-    // visuel : met la classe active sur l'élément choisi
     [...tmdbResults.children].forEach(el => el.classList.remove('active'));
     li.classList.add('active');
-    // Enable the confirm button if present
     document.getElementById('confirmTmdbBtn')?.removeAttribute('disabled');
   });
 }
 
-// ---------- Suggestions TMDb pour Séries (3 résultats) ----------
 const tmdbInputSeries   = document.getElementById('tmdbQuerySeries');
 const tmdbResultsSeries = document.getElementById('tmdbResultsSeries');
 let debounceTimerSeries = null;
@@ -243,11 +226,9 @@ if (tmdbInputSeries && tmdbResultsSeries) {
           }).join('')
         : '<li class="list-group-item">Aucun résultat</li>';
 
-      // Remove previous buttons if they exist
       const existingButtonsSeries = document.getElementById('tmdbButtons');
       if (existingButtonsSeries) existingButtonsSeries.remove();
 
-      // Append buttons after the <ul>
       const buttonGroupSeries = document.createElement('div');
       buttonGroupSeries.id = 'tmdbButtons';
       buttonGroupSeries.className = 'mt-2 d-flex justify-content-end gap-2';
@@ -257,10 +238,8 @@ if (tmdbInputSeries && tmdbResultsSeries) {
       `;
       tmdbResultsSeries.insertAdjacentElement('afterend', buttonGroupSeries);
 
-      // Bind button event listeners
       bindTmdbButtons();
 
-      // Bloque la soumission du formulaire
       document.getElementById('tmdbFormSeries')?.addEventListener('submit', ev => {
         ev.preventDefault();
         ev.stopPropagation();
@@ -280,7 +259,6 @@ if (tmdbInputSeries && tmdbResultsSeries) {
   });
 }
 
-/* -- Fonction utilitaire pour récupérer le film choisi lors du submit -- */
 function getSelectedTmdbId() {
   return selectedTmdbId;
 }

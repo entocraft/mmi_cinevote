@@ -141,7 +141,6 @@ if (!isset($_SESSION['user'])) {
     <div class="navcontainer mb-4">
       <div class="container py-2">
         <div class="row g-2 align-items-center">
-          <!-- Groupe de boutons Films/Séries -->
           <div class="col-12 col-md-auto">
             <div class="btn-group" role="group" aria-label="Switcher Films/Séries" id="contentSwitcher">
               <button type="button" class="btn btn-outline-primary active" data-type="movie">🎬 Films</button>
@@ -149,7 +148,6 @@ if (!isset($_SESSION['user'])) {
             </div>
           </div>
     
-          <!-- Barre de recherche avec bouton -->
           <div class="col">
             <div class="input-group">
               <input type="text" id="searchInput" class="form-control" placeholder="Rechercher un film ou une série...">
@@ -166,7 +164,6 @@ if (!isset($_SESSION['user'])) {
     </div>
   </main>
 
-  <!-- Bootstrap JS Bundle (optionnel) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     window.currentUserId = <?= $_SESSION['user']['id'] ?? 'null' ?>;

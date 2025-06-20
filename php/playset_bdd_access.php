@@ -6,7 +6,6 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 $userIdSession = $_SESSION['user']['id'] ?? ($_SESSION['user_id'] ?? null);
-// Fallback : si la session est vide mais user_id est passé en GET (ex: debug)
 if (!$userIdSession && isset($_GET['user_id'])) {
     $userIdSession = (int) $_GET['user_id'];
 }
@@ -14,7 +13,7 @@ if (!$userIdSession && isset($_GET['user_id'])) {
 file_put_contents("debug.log", file_get_contents("php://input") . PHP_EOL, FILE_APPEND);
 
 header('Content-Type: application/json');
-require_once 'db.php'; // Inclusion de la connexion PDO
+require_once 'db.php';
 
 $action = $_GET['action'] ?? '';
 
@@ -31,7 +30,6 @@ case 'user_vote':
         exit;
     }
 
-    // Vérifier qu'il n'a pas déjà voté pour cette session
     $stmt = $pdo->prepare("SELECT 1 FROM UserVote WHERE UserID = ? AND VoteID = ?");
     $stmt->execute([$user_id, $vote_id]);
     if ($stmt->fetch()) {
@@ -39,21 +37,18 @@ case 'user_vote':
         exit;
     }
 
-    // Insérer le vote
     $stmt = $pdo->prepare("INSERT INTO UserVote (UserID, VoteID, TMDB_ID, Type) VALUES (?, ?, ?, ?)");
     $success = $stmt->execute([$user_id, $vote_id, $tmdb_id, $type]);
     echo json_encode(['success' => $success]);
     break;
 
 case 'vote_results':
-    // Récupérer l’ID de la session de vote depuis l’URL
     $vote_id = $_GET['vote_id'] ?? null;
     if (!$vote_id) {
         echo json_encode(['results' => []]);
         exit;
     }
 
-    // 1. Calculer le nombre de votes par TMDB_ID et Type
     $stmt = $pdo->prepare(
         "SELECT TMDB_ID AS tmdb_id, Type AS type, COUNT(*) AS votes 
          FROM UserVote 
@@ -64,7 +59,6 @@ case 'vote_results':
     $stmt->execute([$vote_id]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 2. Renvoie le JSON attendu par le front
     echo json_encode(['results' => $results]);
     break;
     
@@ -83,20 +77,18 @@ case 'has_voted':
 
 case 'get':
     $userId = $userIdSession;
-    $tmdbId = $_GET['tmdb_id'] ?? null; // Ajout
-    $type = $_GET['type'] ?? null;      // Optionnel : film/serie
+    $tmdbId = $_GET['tmdb_id'] ?? null;
+    $type = $_GET['type'] ?? null;
 
     if (!$userId) {
         echo json_encode(['error' => 'ID utilisateur manquant']);
         exit;
     }
 
-    // On récupère les playsets ET pour chacun on vérifie si le TMDB_ID est déjà dedans
     $stmt = $pdo->prepare("SELECT ID, Name FROM Playsets WHERE UserID = ?");
     $stmt->execute([$userId]);
     $playsets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Pour chaque playset, vérifier la présence du film/série
     if ($tmdbId) {
         foreach ($playsets as &$ps) {
             $sql = "SELECT 1 FROM FilmsPlayset WHERE PlaysetID = ? AND TMDB_ID = ?";
@@ -109,7 +101,7 @@ case 'get':
             $check->execute($params);
             $ps['contains'] = $check->fetchColumn() ? true : false;
         }
-        unset($ps); // break ref
+        unset($ps);
     }
 
     echo json_encode(['playsets' => $playsets]);
@@ -134,8 +126,8 @@ case 'add':
 
     $playsetId = $data['playset_id'] ?? null;
     $type      = $data['type']       ?? null;
-    $filmId    = $data['film_id']    ?? null;   // nouvel ID interne
-    $tmdbId    = $data['tmdb_id']    ?? null;   // compat ancien front
+    $filmId    = $data['film_id']    ?? null;
+    $tmdbId    = $data['tmdb_id']    ?? null;
 
 
     if (!$playsetId || !$filmId || !$type) {
@@ -225,7 +217,6 @@ case 'remove_entry':
         echo json_encode(['error' => 'missing data']);
         exit;
     }
-    // Adapter le nom de la table et des colonnes selon ta structure
     $stmt = $pdo->prepare("DELETE FROM FilmsPlayset WHERE PlaysetID = ? AND TMDB_ID = ? AND Type = ?");
     $stmt->execute([$playset_id, $tmdb_id, $type]);
     echo json_encode(['success' => true]);

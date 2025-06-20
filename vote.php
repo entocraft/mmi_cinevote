@@ -89,13 +89,11 @@ if (!$user_id) {
   <div class="banner d-flex align-items-start justify-content-end" id="voteBanner">
     <div class="vote-card shadow-lg p-4">
         <div class="d-flex flex-column flex-md-row align-items-stretch gap-3">
-            <!-- Colonne gauche (titre + timer + graph) -->
             <div class="d-flex flex-column align-items-center justify-content-center" style="min-width:160px;max-width:220px;">
                 <span id="voteName" style="font-size:1.15em;font-weight:700;margin-bottom:0.2em;text-align:center;">Session Vote</span>
                 <span class="timer mb-2" id="voteTimer" style="font-size:1.08em;font-weight:500;letter-spacing:.09em;text-align:center;">0J : 0H : 0M : 0S</span>
                 <canvas id="voteChart" class="vote-graph mt-1"></canvas>
             </div>
-            <!-- Colonne droite (affiche + select + bouton) -->
             <div class="vote-panel-content d-flex flex-column justify-content-between flex-grow-1 ps-md-4">
                 <div>
                 <div class="vote-selected-poster mb-2 d-none d-md-flex align-items-center justify-content-center" id="selectedPoster" style="height:140px;min-width:90px;"></div>
@@ -110,7 +108,6 @@ if (!$user_id) {
   <div class="container">
     <div class="gallery-title">La sélection</div>
     <div class="row g-3" id="moviesGallery">
-      <!-- Films/séries dynamiques ici -->
     </div>
   </div>
 
@@ -118,9 +115,7 @@ if (!$user_id) {
   <script>
     const USER_ID = <?= isset($user_id) ? $user_id : 'null' ?>;
     const VOTE_ID = new URLSearchParams(location.search).get('vote_id');
-    let PLAYSET_ID = null; // on l'obtient via l'API
-
-    // Fonction utilitaire : récupérer le titre par type et ID depuis TMDb
+    let PLAYSET_ID = null;
     async function fetchTitleById(type, id) {
       const url = `https://api.themoviedb.org/3/${type}/${id}?language=fr-FR`;
       try {
@@ -139,28 +134,22 @@ if (!$user_id) {
       }
     }
 
-    // 1. Charger la session de vote (nom, date fin, playset id, etc)
     async function loadVoteSession() {
       const res = await fetch(`./php/playset_bdd_access.php?action=get_vote_session&id=${VOTE_ID}`);
       const data = await res.json();
       document.getElementById('voteName').textContent = data.name;
       PLAYSET_ID = data.playset_id;
-      // Bannière
       const banner = data.banner ? (data.banner.startsWith('http') ? data.banner : BANNER_BASE + data.banner) : '';
       document.getElementById('voteBanner').style.backgroundImage = banner ? `url(${banner})` : '';
-      // Timer
       setupTimer(data.end);
-      // Charger films
       await loadGalleryAndOptions(PLAYSET_ID);
     }
 
     async function loadGalleryAndOptions(playsetId) {
       const res = await fetch(`./php/playset_bdd_access.php?action=view&id=${playsetId}`);
       const data = await res.json();
-      // Galerie de films
       const gallery = document.getElementById('moviesGallery');
       gallery.innerHTML = '';
-      // Fetch all TMDb details in parallel for better performance
       const detailPromises = data.entries.map(item =>
         fetchTmdbDetails(item.Type, item.TMDB_ID)
       );
@@ -176,7 +165,6 @@ if (!$user_id) {
         `;
         gallery.appendChild(div);
       });
-      // Select d’options de vote with title/name labels
       const sel = document.getElementById('voteSelect');
       sel.innerHTML = data.entries.map((opt, index) => {
         const details = detailsList[index];
@@ -186,7 +174,6 @@ if (!$user_id) {
       }).join('');
     }
 
-    // 3. Gérer le vote
     document.getElementById('voteBtn').onclick = async function() {
         const val = document.getElementById('voteSelect').value;
         if (!val) return;
@@ -202,26 +189,21 @@ if (!$user_id) {
         );
         const d = await res.json();
         if (d.success) {
-            // On désactive le bouton, on change le texte, etc.
             const btn = document.getElementById('voteBtn');
             btn.disabled = true;
             btn.textContent = 'Vous avez déjà voté';
-            // On rafraîchit immédiatement le graphique pour faire apparaître le vote
             updateChart();
         } else {
             alert(d.error || "Erreur lors du vote.");
         }
     };
 
-    // 4. Graphique en direct
     let chart = null;
 
     async function updateChart() {
-        // 1. On récupère les résultats depuis l'API PHP
         const res = await fetch(`./php/playset_bdd_access.php?action=vote_results&vote_id=${VOTE_ID}`);
         const data = await res.json();
 
-        // 2. S'il n'y a pas de "results" ou que ce n'est pas un tableau, on détruit et on sort
         if (!data.results || !Array.isArray(data.results)) {
             if (chart) {
             chart.destroy();
@@ -229,12 +211,10 @@ if (!$user_id) {
             }
             return;
         }
-        // Build labels (fetch titles asynchronously)
         const labelPromises = data.results.map(e => fetchTitleById(e.type, e.tmdb_id));
         const labels = await Promise.all(labelPromises);
         const votes = data.results.map(e => e.votes);
 
-        // 4. Si le graphique n'existe pas encore, on le crée
         if (!chart) {
             const ctx = document.getElementById('voteChart').getContext('2d');
             chart = new Chart(ctx, {
@@ -245,7 +225,6 @@ if (!$user_id) {
                 data: votes,
                 backgroundColor: [
                     '#8b7fab', '#fc829e', '#ffe17c', '#a7edce', '#e4844a',
-                    // Vous pouvez ajouter d’autres couleurs si besoin
                 ]
                 }]
             },
@@ -268,7 +247,6 @@ if (!$user_id) {
             }
         });
     }
-    // 5. Sinon, on met simplement à jour les données existantes
     else {
         chart.data.labels = labels;
         chart.data.datasets[0].data = votes;
@@ -276,13 +254,11 @@ if (!$user_id) {
     }
     }
 
-    // 5. Timer
     function setupTimer(end) {
         function updateTimer() {
             const endTime = new Date(end);
             const now = new Date();
 
-            // Si le temps est écoulé, affiche “0J : 0H : 0M : 0S” et désactive le bouton VOTER
             if (endTime <= now) {
             document.getElementById('voteTimer').textContent = `0J : 0H : 0M : 0S`;
             const btn = document.getElementById('voteBtn');
@@ -293,7 +269,6 @@ if (!$user_id) {
             return;
             }
 
-            // Sinon, calcule le temps restant
             let diff = (endTime - now) / 1000;
             const j = Math.floor(diff / 86400); diff %= 86400;
             const h = Math.floor(diff / 3600); diff %= 3600;
@@ -302,7 +277,6 @@ if (!$user_id) {
 
             document.getElementById('voteTimer').textContent = `${j}J : ${h}H : ${m}M : ${s}S`;
 
-            // Veille à ce que le bouton reste actif tant que le temps n'est pas écoulé
             const btn = document.getElementById('voteBtn');
             if (btn) {
             btn.disabled = false;
@@ -314,7 +288,6 @@ if (!$user_id) {
         updateTimer();
     }
 
-    // After loading session and chart, check if user already voted
     async function checkUserVoted() {
       const user_id = USER_ID;
       const res = await fetch(`./php/playset_bdd_access.php?action=has_voted&vote_id=${VOTE_ID}`);
@@ -343,7 +316,6 @@ if (!$user_id) {
       const details = await fetchTmdbDetails(type, tmdb_id);
       updateSelectedPoster(details);
     };
-    // Affichage initial de l’affiche (si option par défaut)
     if (sel.options.length) {
       const [type, tmdb_id] = sel.options[0].value.split('|');
       fetchTmdbDetails(type, tmdb_id).then(updateSelectedPoster);
@@ -352,11 +324,8 @@ if (!$user_id) {
     window.addEventListener('DOMContentLoaded', () => {
         loadVoteSession()
         .then(() => {
-            // Après avoir chargé la session (bannière, timer, galerie, etc.), on affiche le graphique une première fois
             updateChart();
-            // Puis on rafraîchit toutes les 3500 ms
             setInterval(updateChart, 3500);
-            // Et on vérifie si l'utilisateur a déjà voté
             checkUserVoted();
         });
     });

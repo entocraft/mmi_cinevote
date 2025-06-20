@@ -151,7 +151,6 @@ if (!isset($_SESSION['user_id'])) {
 
     <div class="container mt-4">
         <div class="row" id="playsetContent">
-            <!-- Cartes de films/séries -->
         </div>
     </div>
 
@@ -171,13 +170,10 @@ if (!isset($_SESSION['user_id'])) {
 
         const listContainer = document.getElementById('playsetContent');
 
-        // Toujours afficher la bannière si elle existe, même si aucun film
         if (data.banner) {
-            // Vérifie si le chemin commence par "http" (URL custom) ou non (backdrop TMDb)
             const backdrop = data.banner.startsWith('http') ? data.banner : BANNER_BASE + data.banner;
             document.getElementById('playsetBanner').style.backgroundImage = `url(${backdrop})`;
         } else if (data.entries && data.entries.length > 0) {
-            // Sinon, on peut afficher le backdrop du premier film s'il existe
             const details = await fetchTmdbDetails(data.entries[0].Type, data.entries[0].TMDB_ID);
             if (details.backdrop_path) {
                 document.getElementById('playsetBanner').style.backgroundImage = `url(${BANNER_BASE + details.backdrop_path})`;
@@ -185,11 +181,9 @@ if (!isset($_SESSION['user_id'])) {
                 document.getElementById('playsetBanner').style.backgroundImage = '';
             }
         } else {
-            // Sinon, pas de bannière du tout
             document.getElementById('playsetBanner').style.backgroundImage = '';
         }
 
-        // Puis, pour les films/séries, parcours normalement :
         for (const item of data.entries) {
             const details = await fetchTmdbDetails(item.Type, item.TMDB_ID);
 
@@ -204,7 +198,6 @@ if (!isset($_SESSION['user_id'])) {
                 </div>`;
             listContainer.appendChild(div);
 
-            // Ajout du listener sur le bouton delete
             const deleteBtn = div.querySelector('.delete-entry-btn');
             deleteBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
@@ -243,7 +236,7 @@ if (!isset($_SESSION['user_id'])) {
     const nameInput = document.getElementById('editPlaysetName');
     const descInput = document.getElementById('editPlaysetDesc');
 
-    let playsetData = null; // Pour garder les infos en mémoire
+    let playsetData = null;
 
     async function refreshPlaysetHeader(data) {
         document.getElementById('playsetTitle').textContent = data.name;
@@ -251,7 +244,6 @@ if (!isset($_SESSION['user_id'])) {
     }
 
     editBtn.addEventListener('click', async () => {
-        // Recharge les infos du playset
         const res = await fetch(`./php/playset_bdd_access.php?action=view&id=${playsetId}`);
         playsetData = await res.json();
 
@@ -263,7 +255,6 @@ if (!isset($_SESSION['user_id'])) {
     editForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // Update backend
         await fetch(`./php/playset_bdd_access.php?action=edit`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -274,7 +265,6 @@ if (!isset($_SESSION['user_id'])) {
             })
         });
 
-        // Update header instantanément
         refreshPlaysetHeader({ name: nameInput.value, description: descInput.value });
         editModal.hide();
     });
@@ -283,10 +273,8 @@ if (!isset($_SESSION['user_id'])) {
         const bannerOptions = document.getElementById('bannerOptions');
         bannerOptions.innerHTML = 'Chargement...';
 
-        // On recharge le playset à jour
         const data = await (await fetch(`./php/playset_bdd_access.php?action=view&id=${playsetId}`)).json();
         
-        // S'il y a des films/séries, on affiche les backdrops du premier comme avant
         if (data.entries.length > 0) {
             const exampleItem = data.entries[0];
             const details = await fetchTmdbDetails(exampleItem.Type, exampleItem.TMDB_ID);
@@ -296,7 +284,6 @@ if (!isset($_SESSION['user_id'])) {
             <img src="https://image.tmdb.org/t/p/w300${b.file_path}" data-path="${b.file_path}" class="img-thumbnail" style="cursor:pointer;max-width:30%;">
             `).join('');
 
-            // Event listener sur chaque image
             bannerOptions.querySelectorAll('img').forEach(img => {
             img.addEventListener('click', async () => {
                 const path = img.getAttribute('data-path');
@@ -310,7 +297,6 @@ if (!isset($_SESSION['user_id'])) {
             });
             });
         } else {
-            // Aucun film : propose une recherche TMDb ou une bannière générique
             bannerOptions.innerHTML = `
             <div class="alert alert-info w-100 text-center">
                 Ce playset ne contient aucun film/série.<br>
@@ -322,7 +308,6 @@ if (!isset($_SESSION['user_id'])) {
             </div>
             `;
 
-            // Ajout gestion bouton pour URL custom
             document.getElementById('setCustomBannerBtn').onclick = async () => {
             const url = document.getElementById('customBannerUrl').value.trim();
             if (url) {

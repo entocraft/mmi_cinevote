@@ -1,5 +1,5 @@
 async function loadPlaysets() {
-  const userId = window.currentUserId ?? null; // injecté côté PHP
+  const userId = window.currentUserId ?? null;
   if (!userId) {
     console.error('User ID introuvable : assurez‑vous que window.currentUserId est défini.');
     return;
@@ -10,13 +10,11 @@ async function loadPlaysets() {
     const data = await res.json();
     console.log('DATA FETCHED:', data);
 
-    // Sécurise la structure reçue :
     const playsets = Array.isArray(data.playsets) ? data.playsets : [];
     if (playsets.length === 0) {
       console.warn('Aucun playset trouvé ou structure invalide :', data);
     }
 
-    // DOM container
     const container = document.getElementById('playsetGrid');
     container.innerHTML = '';
 
@@ -87,13 +85,11 @@ document.getElementById('createPlaysetForm').addEventListener('submit', async fu
   const data = await res.json();
 
   if (data.success) {
-    // Ferme le modal et rafraîchit la liste des playsets
     const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('createPlaysetModal'));
     modal.hide();
     document.getElementById('createPlaysetForm').reset();
-    if (typeof loadPlaysets === 'function') loadPlaysets(); // recharge la liste principale
-    if (typeof loadUserPlaysets === 'function') loadUserPlaysets(); // recharge aussi la liste dans la modal d'ajout si besoin
-    // Rafraîchir la page après création du playset
+    if (typeof loadPlaysets === 'function') loadPlaysets();
+    if (typeof loadUserPlaysets === 'function') loadUserPlaysets();
     window.location.reload();
   } else {
     alert(data.error || "Erreur lors de la création du playset.");

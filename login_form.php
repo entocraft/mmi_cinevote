@@ -1,5 +1,4 @@
 <?php
-// Démarrage de la session pour afficher d'éventuels messages d'erreur
 session_start();
 $errorMsg = $_SESSION['login_error'] ?? '';
 unset($_SESSION['login_error']);
